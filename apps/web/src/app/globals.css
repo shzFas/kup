@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+  --color-accent-50: #eef6ff;
+  --color-accent-100: #d9eaff;
+  --color-accent-200: #bcd9ff;
+  --color-accent-500: #2f7bf6;
+  --color-accent-600: #1d63e0;
+  --color-accent-700: #1a4fb4;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #f6f7f9;
+  color: #111827;
+  overflow-x: hidden;
+}
+
+/* Hide number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 h-10 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed select-none whitespace-nowrap;
+}
+@utility btn-primary {
+  @apply btn bg-accent-600 text-white hover:bg-accent-700;
+}
+@utility btn-secondary {
+  @apply btn bg-white text-gray-900 border border-gray-200 hover:bg-gray-50;
+}
+@utility btn-ghost {
+  @apply btn text-gray-700 hover:bg-gray-100;
+}
+@utility btn-danger {
+  @apply btn bg-white text-red-600 border border-red-200 hover:bg-red-50;
+}
+@utility input {
+  @apply w-full h-10 rounded-xl border border-gray-200 bg-white px-3 text-sm outline-none transition-colors placeholder:text-gray-400 focus:border-accent-500 focus:ring-2 focus:ring-accent-100 disabled:bg-gray-50 disabled:text-gray-400;
+}
+@utility card {
+  @apply bg-white rounded-2xl border border-gray-100 shadow-[0_1px_2px_rgba(16,24,40,0.04)];
+}
+@utility chip {
+  @apply inline-flex items-center gap-1 h-8 rounded-full border px-3 text-sm whitespace-nowrap transition-colors;
+}
+@utility skeleton {
+  @apply animate-pulse bg-gray-200/70 rounded-lg;
+}
