@@ -1,0 +1,60 @@
+[
+  { "id": "toyota", "name": "Toyota", "aliases": ["тойота"], "models": [
+    { "name": "Camry", "aliases": ["камри"] }, { "name": "Corolla", "aliases": ["королла"] }, { "name": "RAV4", "aliases": ["рав4", "рав 4"] },
+    { "name": "Land Cruiser", "aliases": ["ленд крузер", "крузак"] }, { "name": "Land Cruiser Prado", "aliases": ["прадо"] },
+    { "name": "Highlander", "aliases": ["хайлендер"] }, { "name": "Hilux", "aliases": ["хайлюкс"] }, { "name": "Prius", "aliases": ["приус"] },
+    { "name": "Yaris", "aliases": ["ярис"] }, { "name": "Alphard", "aliases": ["альфард"] } ] },
+  { "id": "lexus", "name": "Lexus", "aliases": ["лексус"], "models": [
+    { "name": "RX" }, { "name": "LX" }, { "name": "ES" }, { "name": "GX" }, { "name": "NX" }, { "name": "IS" } ] },
+  { "id": "hyundai", "name": "Hyundai", "aliases": ["хендай", "хюндай", "хундай"], "models": [
+    { "name": "Accent", "aliases": ["акцент"] }, { "name": "Elantra", "aliases": ["элантра"] }, { "name": "Sonata", "aliases": ["соната"] },
+    { "name": "Tucson", "aliases": ["туссан"] }, { "name": "Santa Fe", "aliases": ["санта фе"] }, { "name": "Creta", "aliases": ["крета"] },
+    { "name": "Palisade", "aliases": ["палисад"] }, { "name": "Staria" } ] },
+  { "id": "kia", "name": "Kia", "aliases": ["киа"], "models": [
+    { "name": "Rio", "aliases": ["рио"] }, { "name": "K5", "aliases": ["к5"] }, { "name": "Sportage", "aliases": ["спортейдж"] },
+    { "name": "Sorento", "aliases": ["соренто"] }, { "name": "Cerato", "aliases": ["церато"] }, { "name": "Carnival", "aliases": ["карнивал"] },
+    { "name": "Seltos", "aliases": ["селтос"] } ] },
+  { "id": "chevrolet", "name": "Chevrolet", "aliases": ["шевроле", "шевролет"], "models": [
+    { "name": "Cobalt", "aliases": ["кобальт"] }, { "name": "Nexia", "aliases": ["нексия"] }, { "name": "Malibu", "aliases": ["малибу"] },
+    { "name": "Tracker", "aliases": ["трекер"] }, { "name": "Captiva", "aliases": ["каптива"] }, { "name": "Onix" }, { "name": "Tahoe", "aliases": ["тахо"] } ] },
+  { "id": "volkswagen", "name": "Volkswagen", "aliases": ["фольксваген", "vw"], "models": [
+    { "name": "Polo", "aliases": ["поло"] }, { "name": "Passat", "aliases": ["пассат"] }, { "name": "Golf", "aliases": ["гольф"] },
+    { "name": "Tiguan", "aliases": ["тигуан"] }, { "name": "Touareg", "aliases": ["туарег"] }, { "name": "Jetta", "aliases": ["джетта"] } ] },
+  { "id": "bmw", "name": "BMW", "aliases": ["бмв"], "models": [
+    { "name": "3 серия", "aliases": ["3 series", "трешка"] }, { "name": "5 серия", "aliases": ["5 series", "пятерка"] }, { "name": "7 серия", "aliases": ["7 series"] },
+    { "name": "X3", "aliases": ["икс3"] }, { "name": "X5", "aliases": ["икс5"] }, { "name": "X6", "aliases": ["икс6"] }, { "name": "X7" } ] },
+  { "id": "mercedes", "name": "Mercedes-Benz", "aliases": ["мерседес", "мерс", "mercedes"], "models": [
+    { "name": "C-Класс", "aliases": ["c-class", "c class"] }, { "name": "E-Класс", "aliases": ["e-class", "e class"] }, { "name": "S-Класс", "aliases": ["s-class", "s class"] },
+    { "name": "GLE" }, { "name": "GLS" }, { "name": "G-Класс", "aliases": ["гелик", "g-class"] }, { "name": "Sprinter", "aliases": ["спринтер"] } ] },
+  { "id": "audi", "name": "Audi", "aliases": ["ауди"], "models": [
+    { "name": "A4" }, { "name": "A6" }, { "name": "A8" }, { "name": "Q5" }, { "name": "Q7" }, { "name": "Q8" } ] },
+  { "id": "nissan", "name": "Nissan", "aliases": ["ниссан"], "models": [
+    { "name": "Almera", "aliases": ["альмера"] }, { "name": "Qashqai", "aliases": ["кашкай"] }, { "name": "X-Trail", "aliases": ["икстрейл"] },
+    { "name": "Patrol", "aliases": ["патрол"] }, { "name": "Teana", "aliases": ["теана"] }, { "name": "Juke", "aliases": ["жук"] } ] },
+  { "id": "mitsubishi", "name": "Mitsubishi", "aliases": ["митсубиси", "мицубиси"], "models": [
+    { "name": "Outlander", "aliases": ["аутлендер"] }, { "name": "Pajero", "aliases": ["паджеро"] }, { "name": "Pajero Sport" },
+    { "name": "Lancer", "aliases": ["лансер"] }, { "name": "L200" }, { "name": "ASX" } ] },
+  { "id": "honda", "name": "Honda", "aliases": ["хонда"], "models": [
+    { "name": "Accord", "aliases": ["аккорд"] }, { "name": "Civic", "aliases": ["цивик"] }, { "name": "CR-V" }, { "name": "Odyssey", "aliases": ["одиссей"] }, { "name": "Fit" } ] },
+  { "id": "mazda", "name": "Mazda", "aliases": ["мазда"], "models": [
+    { "name": "3" }, { "name": "6" }, { "name": "CX-5" }, { "name": "CX-9" }, { "name": "CX-30" } ] },
+  { "id": "subaru", "name": "Subaru", "aliases": ["субару"], "models": [
+    { "name": "Forester", "aliases": ["форестер"] }, { "name": "Outback", "aliases": ["аутбек"] }, { "name": "Impreza" }, { "name": "XV" } ] },
+  { "id": "lada", "name": "Lada (ВАЗ)", "aliases": ["лада", "ваз", "vaz"], "models": [
+    { "name": "Granta", "aliases": ["гранта"] }, { "name": "Vesta", "aliases": ["веста"] }, { "name": "Niva", "aliases": ["нива"] },
+    { "name": "Largus", "aliases": ["ларгус"] }, { "name": "Priora", "aliases": ["приора"] }, { "name": "2107", "aliases": ["семерка"] } ] },
+  { "id": "renault", "name": "Renault", "aliases": ["рено"], "models": [
+    { "name": "Logan", "aliases": ["логан"] }, { "name": "Duster", "aliases": ["дастер"] }, { "name": "Sandero", "aliases": ["сандеро"] }, { "name": "Arkana", "aliases": ["аркана"] } ] },
+  { "id": "skoda", "name": "Skoda", "aliases": ["шкода"], "models": [
+    { "name": "Octavia", "aliases": ["октавия"] }, { "name": "Rapid", "aliases": ["рапид"] }, { "name": "Kodiaq", "aliases": ["кодиак"] }, { "name": "Superb" } ] },
+  { "id": "chery", "name": "Chery", "aliases": ["чери"], "models": [
+    { "name": "Tiggo 4" }, { "name": "Tiggo 7 Pro" }, { "name": "Tiggo 8 Pro" }, { "name": "Arrizo 8" } ] },
+  { "id": "haval", "name": "Haval", "aliases": ["хавал", "хавейл"], "models": [
+    { "name": "Jolion", "aliases": ["джолион"] }, { "name": "H6" }, { "name": "F7" }, { "name": "Dargo" } ] },
+  { "id": "geely", "name": "Geely", "aliases": ["джили"], "models": [
+    { "name": "Coolray" }, { "name": "Monjaro" }, { "name": "Atlas" }, { "name": "Tugella" } ] },
+  { "id": "tesla", "name": "Tesla", "aliases": ["тесла"], "models": [
+    { "name": "Model 3" }, { "name": "Model Y" }, { "name": "Model S" }, { "name": "Model X" } ] },
+  { "id": "byd", "name": "BYD", "aliases": ["бид"], "models": [
+    { "name": "Han" }, { "name": "Song Plus" }, { "name": "Seal" }, { "name": "Qin Plus" } ] }
+]

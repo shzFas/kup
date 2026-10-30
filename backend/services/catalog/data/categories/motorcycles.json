@@ -1,0 +1,75 @@
+{
+  "slug": "motorcycles", "name": "Мотоциклы", "icon": "motorcycle", "position": 2,
+  "groups": [
+    { "key": "main", "label": "Основное" },
+    { "key": "engine", "label": "Двигатель и трансмиссия" },
+    { "key": "history", "label": "История и документы" },
+    { "key": "options", "label": "Оснащение" }
+  ],
+  "highlights": ["year", "mileage_km", "engine_cc", "power_hp", "moto_type"],
+  "sorts": [
+    { "value": "date_desc", "label": "Сначала новые" },
+    { "value": "price_asc", "label": "Сначала дешёвые" },
+    { "value": "price_desc", "label": "Сначала дорогие" },
+    { "value": "year_desc", "label": "Год: новее" },
+    { "value": "mileage_asc", "label": "Пробег: меньше" }
+  ],
+  "attributes": [
+    { "key": "make", "type": "ref", "ref": "moto_make", "label": "Марка", "group": "main", "required": true,
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "model", "type": "ref", "ref": "moto_model", "parent": "make", "label": "Модель", "group": "main", "required": true,
+      "filter": { "facet": true } },
+    { "key": "moto_type", "type": "enum", "label": "Тип", "group": "main", "required": true,
+      "options": [
+        { "value": "sport", "label": "Спортбайк" }, { "value": "naked", "label": "Нейкед" }, { "value": "cruiser", "label": "Круизер / чоппер" },
+        { "value": "touring", "label": "Туристический" }, { "value": "adventure", "label": "Эндуро / адвенчер" }, { "value": "cross", "label": "Кросс" },
+        { "value": "supermoto", "label": "Мотард" }, { "value": "classic", "label": "Классика" }, { "value": "custom", "label": "Кастом" },
+        { "value": "trike", "label": "Трицикл" }, { "value": "atv", "label": "Квадроцикл" }
+      ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "year", "type": "int", "label": "Год выпуска", "group": "main", "required": true, "min": 1950, "max": 2027,
+      "filter": { "pinned": true, "presets": [2010, 2015, 2018, 2020, 2023] } },
+    { "key": "mileage_km", "type": "int", "label": "Пробег", "unit": "км", "group": "main", "required": true, "min": 0, "max": 500000,
+      "filter": { "presets": [5000, 10000, 20000, 50000] } },
+    { "key": "condition", "type": "enum", "label": "Состояние", "group": "main", "required": true,
+      "options": [ { "value": "new", "label": "Новый" }, { "value": "used", "label": "С пробегом" }, { "value": "damaged", "label": "Битый" }, { "value": "parts", "label": "На запчасти" } ],
+      "filter": { "facet": true } },
+
+    { "key": "engine_cc", "type": "int", "label": "Объём двигателя", "unit": "см³", "group": "engine", "required": true, "min": 49, "max": 3000,
+      "filter": { "pinned": true, "presets": [125, 250, 400, 600, 750, 1000] } },
+    { "key": "power_hp", "type": "int", "label": "Мощность", "unit": "л.с.", "group": "engine", "required": false, "min": 1, "max": 400,
+      "filter": { "presets": [15, 47, 100, 150] } },
+    { "key": "license_category", "type": "enum", "label": "Категория прав", "group": "engine", "required": false, "computed": true,
+      "options": [ { "value": "A1", "label": "A1" }, { "value": "A2", "label": "A2" }, { "value": "A", "label": "A" } ],
+      "filter": { "facet": true } },
+    { "key": "stroke", "type": "enum", "label": "Тактность", "group": "engine", "required": false,
+      "options": [ { "value": "2t", "label": "2-тактный" }, { "value": "4t", "label": "4-тактный" }, { "value": "electric", "label": "Электро" } ],
+      "filter": { "facet": true } },
+    { "key": "cylinders", "type": "enum", "label": "Цилиндры", "group": "engine", "required": false,
+      "options": [ { "value": "1", "label": "1 цилиндр" }, { "value": "2v", "label": "V-twin" }, { "value": "2", "label": "Рядный 2" }, { "value": "3", "label": "Рядный 3" }, { "value": "4", "label": "Рядный 4" }, { "value": "boxer", "label": "Оппозит" }, { "value": "electric", "label": "Электро" } ],
+      "filter": {} },
+    { "key": "cooling", "type": "enum", "label": "Охлаждение", "group": "engine", "required": false,
+      "options": [ { "value": "air", "label": "Воздушное" }, { "value": "liquid", "label": "Жидкостное" } ],
+      "filter": {} },
+    { "key": "transmission", "type": "enum", "label": "Коробка", "group": "engine", "required": false,
+      "options": [ { "value": "manual", "label": "Механика" }, { "value": "automatic", "label": "Автомат" }, { "value": "dct", "label": "DCT" } ],
+      "filter": { "facet": true } },
+    { "key": "final_drive", "type": "enum", "label": "Привод", "group": "engine", "required": false,
+      "options": [ { "value": "chain", "label": "Цепь" }, { "value": "belt", "label": "Ремень" }, { "value": "shaft", "label": "Кардан" } ],
+      "filter": {} },
+
+    { "key": "owners", "type": "int", "label": "Владельцев по ПТС", "group": "history", "required": false, "min": 1, "max": 20,
+      "filter": { "label": "Владельцев", "presets": [1, 2, 3] } },
+    { "key": "customs_cleared", "type": "bool", "label": "Растаможен", "group": "history", "required": false, "filter": {} },
+    { "key": "exchange", "type": "bool", "label": "Возможен обмен", "group": "history", "required": false, "filter": {} },
+    { "key": "vin", "type": "text", "label": "VIN / номер рамы", "group": "history", "required": false },
+
+    { "key": "options", "type": "multi_enum", "label": "Оснащение", "group": "options", "required": false,
+      "options": [
+        { "value": "abs", "label": "ABS" }, { "value": "traction", "label": "Трекшн-контроль" }, { "value": "quickshifter", "label": "Квикшифтер" },
+        { "value": "cases", "label": "Кофры" }, { "value": "crash_bars", "label": "Защитные дуги" }, { "value": "heated_grips", "label": "Подогрев ручек" },
+        { "value": "cruise", "label": "Круиз-контроль" }, { "value": "windshield", "label": "Ветровое стекло" }
+      ],
+      "filter": {} }
+  ]
+}

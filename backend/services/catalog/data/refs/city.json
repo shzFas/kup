@@ -1,0 +1,20 @@
+[
+  { "id": "almaty", "name": "Алматы", "aliases": ["almaty", "алма-ата"] },
+  { "id": "astana", "name": "Астана", "aliases": ["astana", "нур-султан"] },
+  { "id": "shymkent", "name": "Шымкент", "aliases": ["shymkent", "чимкент"] },
+  { "id": "karaganda", "name": "Караганда", "aliases": ["karaganda", "қарағанды"] },
+  { "id": "aktobe", "name": "Актобе", "aliases": ["aktobe", "актюбинск"] },
+  { "id": "taraz", "name": "Тараз", "aliases": ["taraz"] },
+  { "id": "pavlodar", "name": "Павлодар", "aliases": ["pavlodar"] },
+  { "id": "oskemen", "name": "Усть-Каменогорск", "aliases": ["oskemen", "өскемен"] },
+  { "id": "semey", "name": "Семей", "aliases": ["semey", "семипалатинск"] },
+  { "id": "atyrau", "name": "Атырау", "aliases": ["atyrau"] },
+  { "id": "kostanay", "name": "Костанай", "aliases": ["kostanay"] },
+  { "id": "kyzylorda", "name": "Кызылорда", "aliases": ["kyzylorda"] },
+  { "id": "aktau", "name": "Актау", "aliases": ["aktau"] },
+  { "id": "oral", "name": "Уральск", "aliases": ["oral", "uralsk"] },
+  { "id": "petropavl", "name": "Петропавловск", "aliases": ["petropavl"] },
+  { "id": "turkistan", "name": "Туркестан", "aliases": ["turkistan"] },
+  { "id": "kokshetau", "name": "Кокшетау", "aliases": ["kokshetau"] },
+  { "id": "taldykorgan", "name": "Талдыкорган", "aliases": ["taldykorgan"] }
+]

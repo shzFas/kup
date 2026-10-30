@@ -1,0 +1,99 @@
+{
+  "slug": "cars", "name": "Автомобили", "icon": "car", "position": 1,
+  "groups": [
+    { "key": "main", "label": "Основное" },
+    { "key": "body", "label": "Кузов" },
+    { "key": "engine", "label": "Двигатель и трансмиссия" },
+    { "key": "history", "label": "История и документы" },
+    { "key": "options", "label": "Комплектация" }
+  ],
+  "highlights": ["year", "mileage_km", "engine_volume", "fuel", "transmission"],
+  "sorts": [
+    { "value": "date_desc", "label": "Сначала новые" },
+    { "value": "price_asc", "label": "Сначала дешёвые" },
+    { "value": "price_desc", "label": "Сначала дорогие" },
+    { "value": "year_desc", "label": "Год: новее" },
+    { "value": "mileage_asc", "label": "Пробег: меньше" }
+  ],
+  "attributes": [
+    { "key": "make", "type": "ref", "ref": "car_make", "label": "Марка", "group": "main", "required": true,
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "model", "type": "ref", "ref": "car_model", "parent": "make", "label": "Модель", "group": "main", "required": true,
+      "filter": { "facet": true } },
+    { "key": "year", "type": "int", "label": "Год выпуска", "group": "main", "required": true, "min": 1960, "max": 2027,
+      "filter": { "pinned": true, "presets": [2010, 2015, 2018, 2020, 2023] } },
+    { "key": "mileage_km", "type": "int", "label": "Пробег", "unit": "км", "group": "main", "required": true, "min": 0, "max": 2000000,
+      "filter": { "pinned": true, "presets": [10000, 50000, 100000, 150000, 200000] } },
+    { "key": "condition", "type": "enum", "label": "Состояние", "group": "main", "required": true,
+      "options": [ { "value": "new", "label": "Новый" }, { "value": "used", "label": "С пробегом" }, { "value": "damaged", "label": "Битый" }, { "value": "parts", "label": "На запчасти" } ],
+      "filter": { "facet": true } },
+    { "key": "steering", "type": "enum", "label": "Руль", "group": "main", "required": true,
+      "options": [ { "value": "left", "label": "Левый" }, { "value": "right", "label": "Правый" } ],
+      "filter": { "facet": true } },
+
+    { "key": "body_type", "type": "enum", "label": "Кузов", "group": "body", "required": true,
+      "options": [
+        { "value": "sedan", "label": "Седан" }, { "value": "hatchback", "label": "Хэтчбек" }, { "value": "liftback", "label": "Лифтбек" },
+        { "value": "wagon", "label": "Универсал" }, { "value": "suv", "label": "Внедорожник" }, { "value": "crossover", "label": "Кроссовер" },
+        { "value": "coupe", "label": "Купе" }, { "value": "cabrio", "label": "Кабриолет" }, { "value": "minivan", "label": "Минивэн" },
+        { "value": "pickup", "label": "Пикап" }, { "value": "van", "label": "Фургон" }
+      ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "color", "type": "enum", "label": "Цвет", "group": "body", "required": false,
+      "options": [
+        { "value": "white", "label": "Белый" }, { "value": "black", "label": "Чёрный" }, { "value": "silver", "label": "Серебристый" },
+        { "value": "gray", "label": "Серый" }, { "value": "blue", "label": "Синий" }, { "value": "red", "label": "Красный" },
+        { "value": "green", "label": "Зелёный" }, { "value": "brown", "label": "Коричневый" }, { "value": "beige", "label": "Бежевый" },
+        { "value": "yellow", "label": "Жёлтый" }, { "value": "other", "label": "Другой" }
+      ],
+      "filter": { "facet": true } },
+    { "key": "seats", "type": "int", "label": "Количество мест", "group": "body", "required": false, "min": 1, "max": 20,
+      "filter": {} },
+
+    { "key": "fuel", "type": "enum", "label": "Топливо", "group": "engine", "required": true,
+      "options": [
+        { "value": "petrol", "label": "Бензин" }, { "value": "diesel", "label": "Дизель" }, { "value": "hybrid", "label": "Гибрид" },
+        { "value": "plugin_hybrid", "label": "Подключаемый гибрид" }, { "value": "electric", "label": "Электро" },
+        { "value": "gas", "label": "Газ" }, { "value": "gas_petrol", "label": "Газ/бензин" }
+      ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "engine_volume", "type": "decimal", "label": "Объём двигателя", "unit": "л", "group": "engine", "required": true,
+      "min": 0.6, "max": 8.5, "step": 0.1,
+      "depends_on": { "key": "fuel", "values": ["petrol", "diesel", "hybrid", "plugin_hybrid", "gas", "gas_petrol"] },
+      "filter": { "presets": [1.6, 2.0, 2.5, 3.0] } },
+    { "key": "power_hp", "type": "int", "label": "Мощность", "unit": "л.с.", "group": "engine", "required": false, "min": 30, "max": 2000,
+      "filter": { "presets": [100, 150, 200, 300] } },
+    { "key": "range_km", "type": "int", "label": "Запас хода", "unit": "км", "group": "engine", "required": false, "min": 50, "max": 1200,
+      "depends_on": { "key": "fuel", "values": ["electric"] },
+      "filter": {} },
+    { "key": "transmission", "type": "enum", "label": "Коробка передач", "group": "engine", "required": true,
+      "options": [ { "value": "manual", "label": "Механика" }, { "value": "automatic", "label": "Автомат" }, { "value": "robot", "label": "Робот" }, { "value": "cvt", "label": "Вариатор" } ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "drive", "type": "enum", "label": "Привод", "group": "engine", "required": true,
+      "options": [ { "value": "fwd", "label": "Передний" }, { "value": "rwd", "label": "Задний" }, { "value": "awd", "label": "Полный" } ],
+      "filter": { "facet": true } },
+
+    { "key": "owners", "type": "int", "label": "Владельцев по ПТС", "group": "history", "required": false, "min": 1, "max": 20,
+      "filter": { "label": "Владельцев", "presets": [1, 2, 3] } },
+    { "key": "customs_cleared", "type": "bool", "label": "Растаможен", "group": "history", "required": false,
+      "filter": {} },
+    { "key": "no_accidents", "type": "bool", "label": "Без ДТП", "group": "history", "required": false,
+      "filter": {} },
+    { "key": "service_book", "type": "bool", "label": "Сервисная книжка", "group": "history", "required": false,
+      "filter": {} },
+    { "key": "exchange", "type": "bool", "label": "Возможен обмен", "group": "history", "required": false,
+      "filter": {} },
+    { "key": "vin", "type": "text", "label": "VIN", "group": "history", "required": false },
+
+    { "key": "options", "type": "multi_enum", "label": "Опции", "group": "options", "required": false,
+      "options": [
+        { "value": "abs", "label": "ABS" }, { "value": "esp", "label": "ESP" }, { "value": "cruise", "label": "Круиз-контроль" },
+        { "value": "climate", "label": "Климат-контроль" }, { "value": "heated_seats", "label": "Подогрев сидений" },
+        { "value": "leather", "label": "Кожаный салон" }, { "value": "sunroof", "label": "Люк" }, { "value": "panorama", "label": "Панорамная крыша" },
+        { "value": "camera", "label": "Камера заднего вида" }, { "value": "parktronic", "label": "Парктроники" },
+        { "value": "led", "label": "LED-фары" }, { "value": "keyless", "label": "Бесключевой доступ" },
+        { "value": "carplay", "label": "CarPlay / Android Auto" }, { "value": "heated_wheel", "label": "Подогрев руля" }
+      ],
+      "filter": {} }
+  ]
+}

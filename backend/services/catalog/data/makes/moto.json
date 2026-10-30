@@ -1,0 +1,23 @@
+[
+  { "id": "honda", "name": "Honda", "aliases": ["хонда"], "models": [
+    { "name": "CBR600RR" }, { "name": "CBR1000RR" }, { "name": "CB500F" }, { "name": "CB650R" }, { "name": "Africa Twin", "aliases": ["африка твин"] }, { "name": "CRF250L" }, { "name": "Rebel 500" }, { "name": "Gold Wing" } ] },
+  { "id": "yamaha", "name": "Yamaha", "aliases": ["ямаха"], "models": [
+    { "name": "YZF-R1" }, { "name": "YZF-R6" }, { "name": "YZF-R3" }, { "name": "MT-07" }, { "name": "MT-09" }, { "name": "Tenere 700" }, { "name": "WR250F" } ] },
+  { "id": "kawasaki", "name": "Kawasaki", "aliases": ["кавасаки"], "models": [
+    { "name": "Ninja 400" }, { "name": "Ninja ZX-6R" }, { "name": "Ninja ZX-10R" }, { "name": "Z650" }, { "name": "Z900" }, { "name": "Versys 650" }, { "name": "KLX250" } ] },
+  { "id": "suzuki", "name": "Suzuki", "aliases": ["сузуки"], "models": [
+    { "name": "GSX-R600" }, { "name": "GSX-R1000" }, { "name": "SV650" }, { "name": "V-Strom 650" }, { "name": "Hayabusa", "aliases": ["хаябуса"] }, { "name": "DR-Z400" } ] },
+  { "id": "bmw", "name": "BMW Motorrad", "aliases": ["бмв", "bmw"], "models": [
+    { "name": "R 1250 GS" }, { "name": "S 1000 RR" }, { "name": "F 900 R" }, { "name": "G 310 R" }, { "name": "R nineT" } ] },
+  { "id": "ktm", "name": "KTM", "aliases": ["ктм"], "models": [
+    { "name": "Duke 390" }, { "name": "Duke 790" }, { "name": "890 Adventure" }, { "name": "EXC 300" }, { "name": "SX-F 450" } ] },
+  { "id": "ducati", "name": "Ducati", "aliases": ["дукати"], "models": [
+    { "name": "Monster" }, { "name": "Panigale V4" }, { "name": "Multistrada V4" }, { "name": "Scrambler" } ] },
+  { "id": "harley", "name": "Harley-Davidson", "aliases": ["харлей"], "models": [
+    { "name": "Sportster S" }, { "name": "Fat Boy" }, { "name": "Street Glide" }, { "name": "Iron 883" } ] },
+  { "id": "triumph", "name": "Triumph", "aliases": ["триумф"], "models": [
+    { "name": "Street Triple" }, { "name": "Tiger 900" }, { "name": "Bonneville T120" } ] },
+  { "id": "ural", "name": "Урал", "aliases": ["ural"], "models": [ { "name": "Gear-Up" }, { "name": "M-72" } ] },
+  { "id": "irbis", "name": "Irbis", "aliases": ["ирбис"], "models": [ { "name": "Garpia" }, { "name": "TTR 250" }, { "name": "XR250R" } ] },
+  { "id": "zongshen", "name": "Zongshen", "aliases": ["зонгшен"], "models": [ { "name": "ZS250GS" }, { "name": "NC250" } ] }
+]

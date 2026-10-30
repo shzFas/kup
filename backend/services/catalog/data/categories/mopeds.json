@@ -1,0 +1,59 @@
+{
+  "slug": "mopeds", "name": "Мопеды и скутеры", "icon": "scooter", "position": 3,
+  "groups": [
+    { "key": "main", "label": "Основное" },
+    { "key": "engine", "label": "Двигатель" }
+  ],
+  "highlights": ["year", "engine_cc", "motor_w", "max_speed_kmh", "license_required"],
+  "sorts": [
+    { "value": "date_desc", "label": "Сначала новые" },
+    { "value": "price_asc", "label": "Сначала дешёвые" },
+    { "value": "price_desc", "label": "Сначала дорогие" },
+    { "value": "year_desc", "label": "Год: новее" },
+    { "value": "mileage_asc", "label": "Пробег: меньше" }
+  ],
+  "attributes": [
+    { "key": "make", "type": "ref", "ref": "moped_make", "label": "Марка", "group": "main", "required": true,
+      "filter": { "facet": true } },
+    { "key": "model", "type": "ref", "ref": "moped_model", "parent": "make", "label": "Модель", "group": "main", "required": true,
+      "filter": { "facet": true } },
+    { "key": "moped_type", "type": "enum", "label": "Тип", "group": "main", "required": true,
+      "options": [
+        { "value": "moped", "label": "Мопед" }, { "value": "scooter", "label": "Скутер" }, { "value": "maxi_scooter", "label": "Макси-скутер" },
+        { "value": "e_scooter", "label": "Электроскутер" }, { "value": "pitbike", "label": "Питбайк" }
+      ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "license_required", "type": "enum", "label": "Права", "group": "main", "required": true,
+      "options": [ { "value": "none", "label": "Без прав" }, { "value": "M", "label": "Категория M" }, { "value": "A1", "label": "Категория A1" } ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "year", "type": "int", "label": "Год выпуска", "group": "main", "required": true, "min": 1970, "max": 2027,
+      "filter": { "presets": [2015, 2018, 2020, 2023] } },
+    { "key": "mileage_km", "type": "int", "label": "Пробег", "unit": "км", "group": "main", "required": false, "min": 0, "max": 200000,
+      "filter": { "presets": [1000, 5000, 10000] } },
+    { "key": "condition", "type": "enum", "label": "Состояние", "group": "main", "required": true,
+      "options": [ { "value": "new", "label": "Новый" }, { "value": "used", "label": "Б/у" }, { "value": "parts", "label": "На запчасти" } ],
+      "filter": { "facet": true } },
+
+    { "key": "power_source", "type": "enum", "label": "Тип двигателя", "group": "engine", "required": true,
+      "options": [ { "value": "petrol", "label": "Бензин" }, { "value": "electric", "label": "Электро" } ],
+      "filter": { "pinned": true, "facet": true } },
+    { "key": "engine_cc", "type": "int", "label": "Объём двигателя", "unit": "см³", "group": "engine", "required": true, "min": 25, "max": 800,
+      "depends_on": { "key": "power_source", "values": ["petrol"] },
+      "filter": { "presets": [50, 125, 150, 300] } },
+    { "key": "stroke", "type": "enum", "label": "Тактность", "group": "engine", "required": false,
+      "depends_on": { "key": "power_source", "values": ["petrol"] },
+      "options": [ { "value": "2t", "label": "2-тактный" }, { "value": "4t", "label": "4-тактный" } ],
+      "filter": {} },
+    { "key": "motor_w", "type": "int", "label": "Мощность мотора", "unit": "Вт", "group": "engine", "required": true, "min": 100, "max": 20000,
+      "depends_on": { "key": "power_source", "values": ["electric"] },
+      "filter": { "presets": [1000, 2000, 3000, 4000] } },
+    { "key": "battery_ah", "type": "int", "label": "Ёмкость батареи", "unit": "А·ч", "group": "engine", "required": false, "min": 5, "max": 200,
+      "depends_on": { "key": "power_source", "values": ["electric"] },
+      "filter": {} },
+    { "key": "range_km", "type": "int", "label": "Запас хода", "unit": "км", "group": "engine", "required": false, "min": 5, "max": 400,
+      "depends_on": { "key": "power_source", "values": ["electric"] },
+      "filter": { "presets": [40, 60, 100] } },
+    { "key": "max_speed_kmh", "type": "int", "label": "Максимальная скорость", "unit": "км/ч", "group": "engine", "required": false, "min": 10, "max": 200,
+      "filter": { "presets": [45, 60, 90] } }
+  ]
+}
