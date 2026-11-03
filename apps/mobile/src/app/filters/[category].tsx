@@ -10,7 +10,7 @@ import { setSearchState, useFacets, useSearchState, withFilter } from '@/lib/sea
 import { useFilterRefNames } from '@/lib/useFilterRefNames';
 import { openPicker } from '@/lib/picker';
 import { useDebounced } from '@/lib/useDebounced';
-import { listingsCount } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
 import { useColors } from '@/lib/theme';
 import { FilterRenderer } from '@/components/filters/FilterRenderer';
 import { Button, ErrorState, Loading, T } from '@/components/ui';
@@ -18,6 +18,7 @@ import { Button, ErrorState, Loading, T } from '@/components/ui';
 export default function FiltersScreen() {
   const { category } = useLocalSearchParams<{ category: string }>();
   const c = useColors();
+  const { t, listings } = useI18n();
   const insets = useSafeAreaInsets();
   const schema = useSchema(category);
   const committed = useSearchState(category);
@@ -56,21 +57,21 @@ export default function FiltersScreen() {
   };
 
   const pending = count.isFetching || debounced !== draft;
-  const label = count.data != null ? `Показать ${listingsCount(count.data)}` : 'Показать объявления';
+  const label = count.data != null ? t('filters.showCount', { count: listings(count.data) }) : t('filters.showListings');
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
       <Stack.Screen
         options={{
-          title: 'Фильтры',
+          title: t('nav.filters'),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={10}>
-              <T color="accent">Закрыть</T>
+              <T color="accent">{t('common.close')}</T>
             </Pressable>
           ),
           headerRight: () => (
             <Pressable onPress={() => setDraft({})} hitSlop={10}>
-              <T color="accent">Сбросить</T>
+              <T color="accent">{t('common.reset')}</T>
             </Pressable>
           ),
         }}
@@ -86,10 +87,10 @@ export default function FiltersScreen() {
           </ScrollView>
           <View style={[styles.footer, { backgroundColor: c.card, borderTopColor: c.border, paddingBottom: insets.bottom + 10 }]}>
             {Object.keys(draft).length > 0 && (
-              <Button title="Сбросить" variant="secondary" onPress={() => setDraft({})} style={{ paddingHorizontal: 18 }} />
+              <Button title={t('common.reset')} variant="secondary" onPress={() => setDraft({})} style={{ paddingHorizontal: 18 }} />
             )}
             <Button
-              title={count.isError ? 'Показать' : label}
+              title={count.isError ? t('filters.show') : label}
               onPress={apply}
               loading={pending && count.data == null}
               style={{ flex: 1, opacity: pending ? 0.85 : 1 }}

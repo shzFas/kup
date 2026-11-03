@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { useCategories } from '@/lib/queries';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
 import { CategoryIcon } from '@/components/CategoryIcon';
 import { LoginPrompt } from '@/components/LoginPrompt';
@@ -11,14 +12,15 @@ import { ErrorState, Skeleton, T } from '@/components/ui';
 
 export default function PostTab() {
   const c = useColors();
+  const { t } = useI18n();
   const { user } = useAuth();
   const cats = useCategories();
-  if (!user) return <LoginPrompt icon="add-circle-outline" text="Чтобы подать объявление, войдите по номеру телефона" />;
+  if (!user) return <LoginPrompt icon="add-circle-outline" text={t('post.login')} />;
   if (cats.isError) return <ErrorState message={errorMessage(cats.error)} onRetry={() => cats.refetch()} />;
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
       <T variant="h3" style={{ marginBottom: 4 }}>
-        Выберите категорию
+        {t('post.chooseCategory')}
       </T>
       {cats.isLoading
         ? [0, 1, 2, 3].map((i) => <Skeleton key={i} style={{ height: 68, borderRadius: radius.l }} />)

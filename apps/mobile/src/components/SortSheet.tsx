@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Option } from '@kup/shared';
+import { useI18n } from '@/lib/i18n';
 import { useColors } from '@/lib/theme';
 import { Sheet } from './Sheet';
 import { T } from './ui';
@@ -19,8 +20,9 @@ export function SortSheet({
   onChange: (v: string) => void;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   return (
-    <Sheet visible={visible} onClose={onClose} title="Сортировка">
+    <Sheet visible={visible} onClose={onClose} title={t('search.sort')}>
       {sorts.map((s, i) => {
         const active = value ? value === s.value : i === 0;
         return (

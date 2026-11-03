@@ -3,6 +3,7 @@ import { Alert } from 'react-native';
 import { api, errorMessage } from './api';
 import { createStore, useStore } from './store';
 import { useRequireAuth } from './auth';
+import { i18n } from './i18n';
 
 /** Local overrides of is_favorite so every card updates instantly after a toggle. */
 const overrides = createStore<Record<string, boolean>>({});
@@ -20,7 +21,7 @@ export function useToggleFavorite() {
     onMutate: ({ id, value }) => overrides.set((s) => ({ ...s, [id]: value })),
     onError: (e, { id, value }) => {
       overrides.set((s) => ({ ...s, [id]: !value }));
-      Alert.alert('Не удалось обновить избранное', errorMessage(e));
+      Alert.alert(i18n().t('fav.updateFailed'), errorMessage(e));
     },
     onSettled: () => qc.invalidateQueries({ queryKey: ['favorites'] }),
   });

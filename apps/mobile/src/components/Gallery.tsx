@@ -4,6 +4,7 @@ import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { mediaUrl } from '@/lib/api';
+import { useI18n } from '@/lib/i18n';
 import { useColors } from '@/lib/theme';
 import { T } from './ui';
 
@@ -58,6 +59,7 @@ function Pager({
 
 export function Gallery({ photos }: { photos: string[] }) {
   const c = useColors();
+  const { t } = useI18n();
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(0);
@@ -68,7 +70,7 @@ export function Gallery({ photos }: { photos: string[] }) {
     return (
       <View style={{ width, height: h * 0.7, backgroundColor: c.fill, alignItems: 'center', justifyContent: 'center' }}>
         <Ionicons name="image-outline" size={48} color={c.textTertiary} />
-        <T color="tertiary">Нет фото</T>
+        <T color="tertiary">{t('form.noPhoto')}</T>
       </View>
     );
   }
@@ -96,7 +98,7 @@ export function Gallery({ photos }: { photos: string[] }) {
             <T style={{ color: '#fff' }}>
               {index + 1} / {photos.length}
             </T>
-            <Pressable onPress={() => setFull(false)} hitSlop={12} accessibilityLabel="Закрыть">
+            <Pressable onPress={() => setFull(false)} hitSlop={12} accessibilityLabel={t('common.close')}>
               <Ionicons name="close" size={30} color="#fff" />
             </Pressable>
           </View>

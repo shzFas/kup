@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import type { CategorySchema } from '@kup/shared';
 import { api } from './api';
+import { useAuth } from './auth';
+import { keys } from './chatCache';
+import { i18n } from './i18n';
 import { rememberRefNames } from './refNames';
 
 export function useCategories() {
@@ -41,5 +44,29 @@ export function orderedGroups(schema: CategorySchema, keys: string[]) {
     const ib = order.indexOf(b);
     return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
   });
-  return present.map((key) => ({ key, label: labels.get(key) ?? (key === 'common' ? 'Общие' : 'Прочее') }));
+  return present.map((key) => ({ key, label: labels.get(key) ?? i18n().t(key === 'common' ? 'common.commonGroup' : 'common.otherGroup') }));
+}
+
+/** Unread chat messages (tab badge). Kept fresh by the events provider. */
+export function useUnreadChats() {
+  const { user } = useAuth();
+  return useQuery({ queryKey: keys.unreadChats, queryFn: api.chatUnread, enabled: !!user, staleTime: 60_000 }).data ?? 0;
+}
+
+/** Unread notifications (badges). The events provider increments it on realtime events. */
+export function useUnreadNotifications() {
+  const { user } = useAuth();
+  return useQuery({ queryKey: keys.unreadNotifications, queryFn: api.unreadNotifications, enabled: !!user, staleTime: 60_000 }).data ?? 0;
+}
+
+/** Saved searches (shared by Favorites › Searches and Profile › Saved searches). */
+export function useSavedSearches() {
+  const { user } = useAuth();
+  return useQuery({ queryKey: keys.savedSearches, queryFn: api.savedSearches, enabled: !!user });
+}
+
+/** Total of new listings across saved searches (badge). */
+export function useSavedSearchesNew() {
+  const q = useSavedSearches();
+  return (q.data ?? []).reduce((s, x) => s + (x.new_count || 0), 0);
 }

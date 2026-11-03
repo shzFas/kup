@@ -2,6 +2,7 @@ import { Fragment } from 'react';
 import { View } from 'react-native';
 import { filterValuesForDeps, isDependencyMet, type CategorySchema, type FilterDef, type Filters, type FilterValue } from '@kup/shared';
 import { orderedGroups } from '@/lib/queries';
+import { useI18n } from '@/lib/i18n';
 import { useColors } from '@/lib/theme';
 import { Divider, T } from '../ui';
 import { MultiWidget, RangeWidget, RefWidget, SelectWidget, ToggleWidget } from './widgets';
@@ -23,6 +24,7 @@ export function FilterRenderer({
   onOpenRef: (def: FilterDef) => void;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const deps = filterValuesForDeps(value);
   const visible = schema.filters.filter((d) => isDependencyMet(d.depends_on, deps));
   const groups = orderedGroups(schema, visible.map((d) => d.group));
@@ -61,7 +63,7 @@ export function FilterRenderer({
                         def={d}
                         value={value[d.key]}
                         names={names}
-                        disabledHint={d.parent && !value[d.parent] ? `Сначала выберите: ${labelOf(d.parent)}` : undefined}
+                        disabledHint={d.parent && !value[d.parent] ? t('common.selectFirst', { label: labelOf(d.parent) }) : undefined}
                         onOpen={() => onOpenRef(d)}
                         onClear={() => set(undefined)}
                       />

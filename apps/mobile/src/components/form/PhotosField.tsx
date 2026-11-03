@@ -1,6 +1,7 @@
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
 import { T } from '../ui';
 import { MAX_PHOTOS, type PhotoItem } from './photos';
@@ -21,13 +22,16 @@ export function PhotosField({
   error?: string;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const uploading = photos.filter((p) => p.status === 'uploading').length;
   return (
     <View style={{ paddingVertical: 12 }}>
       <View style={styles.head}>
-        <T style={{ fontWeight: '600' }}>Фото</T>
+        <T style={{ fontWeight: '600' }}>{t('form.photos')}</T>
         <T variant="small" color="tertiary">
-          {uploading ? `Загрузка… ${photos.length - uploading} из ${photos.length}` : `${photos.length} из ${MAX_PHOTOS}`}
+          {uploading
+            ? t('form.photosUploading', { done: photos.length - uploading, total: photos.length })
+            : t('form.photosCount', { n: photos.length, max: MAX_PHOTOS })}
         </T>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.row}>
@@ -35,7 +39,7 @@ export function PhotosField({
           <Pressable onPress={onAdd} style={[styles.tile, styles.add, { borderColor: c.accent, backgroundColor: c.accentSoft }]}>
             <Ionicons name="camera-outline" size={28} color={c.accent} />
             <T variant="caption" color="accent">
-              Добавить
+              {t('form.addPhoto')}
             </T>
           </Pressable>
         )}
@@ -51,25 +55,25 @@ export function PhotosField({
               <View style={styles.overlay}>
                 <Ionicons name="refresh" size={24} color="#fff" />
                 <T variant="caption" style={{ color: '#fff' }}>
-                  Повторить
+                  {t('form.retry')}
                 </T>
               </View>
             )}
             {i === 0 && (
               <View style={[styles.cover, { backgroundColor: c.accent }]}>
                 <T variant="caption" color="inverse">
-                  Обложка
+                  {t('form.cover')}
                 </T>
               </View>
             )}
-            <Pressable onPress={() => onRemove(p.key)} hitSlop={8} style={styles.remove} accessibilityLabel="Удалить фото">
+            <Pressable onPress={() => onRemove(p.key)} hitSlop={8} style={styles.remove} accessibilityLabel={t('form.removePhoto')}>
               <Ionicons name="close" size={14} color="#fff" />
             </Pressable>
           </Pressable>
         ))}
       </ScrollView>
       <T variant="caption" color={error ? 'danger' : 'tertiary'} style={{ paddingHorizontal: 16, marginTop: 6 }}>
-        {error ?? 'Первое фото — обложка. Нажмите на фото, чтобы сделать его обложкой.'}
+        {error ?? t('form.photosHint')}
       </T>
     </View>
   );

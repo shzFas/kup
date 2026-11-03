@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import type { Attribute, AttrValue } from '@kup/shared';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
+import { HintText } from '../Hint';
 import { CheckRow } from '../Check';
 import { Sheet } from '../Sheet';
 import { Chip, Segmented, T } from '../ui';
@@ -19,8 +21,8 @@ export function FieldLabel({ label, required, unit }: { label: string; required?
   );
 }
 
-export function FieldError({ error }: { error?: string }) {
-  if (!error) return null;
+export function FieldError({ error, hint }: { error?: string; hint?: string | null }) {
+  if (!error) return <HintText hint={hint} />;
   return (
     <T variant="caption" color="danger" style={{ marginTop: 6 }}>
       {error}
@@ -32,11 +34,12 @@ export function SelectRow({
   label,
   required,
   value,
-  placeholder = 'Выбрать',
+  placeholder,
   onPress,
   disabledHint,
   error,
   onClear,
+  hint,
 }: {
   label: string;
   required?: boolean;
@@ -46,8 +49,10 @@ export function SelectRow({
   disabledHint?: string;
   error?: string;
   onClear?: () => void;
+  hint?: string | null;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const disabled = !!disabledHint;
   return (
     <View style={styles.field}>
@@ -59,7 +64,7 @@ export function SelectRow({
           { backgroundColor: c.fill, borderColor: error ? c.danger : 'transparent', opacity: disabled ? 0.5 : pressed ? 0.7 : 1 },
         ]}>
         <T style={{ flex: 1 }} color={value ? undefined : 'tertiary'} numberOfLines={1}>
-          {value || (disabled ? disabledHint : placeholder)}
+          {value || (disabled ? disabledHint : (placeholder ?? t('common.select')))}
         </T>
         {value && onClear ? (
           <Pressable onPress={onClear} hitSlop={10}>
@@ -69,7 +74,7 @@ export function SelectRow({
           <Ionicons name="chevron-forward" size={18} color={c.textTertiary} />
         )}
       </Pressable>
-      <FieldError error={error} />
+      <FieldError error={error} hint={hint} />
     </View>
   );
 }
@@ -124,7 +129,9 @@ export function AttributeField({
   onOpenRef: () => void;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const [sheet, setSheet] = useState(false);
+  const hint = attr.hint;
   const options = attr.options ?? [];
 
   switch (attr.type) {
@@ -135,8 +142,9 @@ export function AttributeField({
           required={attr.required}
           value={value != null ? (refName ?? String(value)) : undefined}
           onPress={onOpenRef}
-          disabledHint={parentMissing ? `Сначала выберите: ${parentMissing}` : undefined}
+          disabledHint={parentMissing ? t('common.selectFirst', { label: parentMissing }) : undefined}
           error={error}
+          hint={hint}
           onClear={attr.required ? undefined : () => onChange(undefined)}
         />
       );
@@ -150,7 +158,7 @@ export function AttributeField({
               value={(value as string) ?? ''}
               onChange={(v) => onChange(v === value && !attr.required ? undefined : v)}
             />
-            <FieldError error={error} />
+            <FieldError error={error} hint={hint} />
           </View>
         );
       }
@@ -162,6 +170,7 @@ export function AttributeField({
             value={options.find((o) => o.value === value)?.label}
             onPress={() => setSheet(true)}
             error={error}
+            hint={hint}
             onClear={attr.required ? undefined : () => onChange(undefined)}
           />
           <Sheet visible={sheet} onClose={() => setSheet(false)} title={attr.label}>
@@ -200,7 +209,7 @@ export function AttributeField({
               />
             ))}
           </View>
-          <FieldError error={error} />
+          <FieldError error={error} hint={hint} />
         </View>
       );
     }
@@ -214,7 +223,7 @@ export function AttributeField({
             </T>
             <Switch value={!!value} onValueChange={(x) => onChange(x)} trackColor={{ true: c.accent }} />
           </Pressable>
-          <FieldError error={error} />
+          <FieldError error={error} hint={hint} />
         </View>
       );
     case 'int':
@@ -230,7 +239,7 @@ export function AttributeField({
             placeholder={attr.min != null && attr.max != null ? `${attr.min} – ${attr.max}` : undefined}
             error={!!error}
           />
-          <FieldError error={error} />
+          <FieldError error={error} hint={hint} />
         </View>
       );
     case 'text':
@@ -244,7 +253,7 @@ export function AttributeField({
             style={[styles.input, styles.inputText, { backgroundColor: c.fill, color: c.text, borderColor: error ? c.danger : 'transparent' }]}
             placeholderTextColor={c.textTertiary}
           />
-          <FieldError error={error} />
+          <FieldError error={error} hint={hint} />
         </View>
       );
   }

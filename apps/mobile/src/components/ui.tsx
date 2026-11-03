@@ -11,6 +11,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
 
 export type IconName = keyof typeof Ionicons.glyphMap;
@@ -113,6 +114,7 @@ export function Chip({
   muted?: boolean;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const fg = active ? c.accent : muted ? c.textTertiary : c.text;
   return (
     <Pressable
@@ -130,7 +132,7 @@ export function Chip({
         {label}
       </Text>
       {onRemove && (
-        <Pressable hitSlop={10} onPress={onRemove} accessibilityLabel={`Убрать ${label}`}>
+        <Pressable hitSlop={10} onPress={onRemove} accessibilityLabel={t('common.remove', { label })}>
           <Ionicons name="close" size={15} color={fg} />
         </Pressable>
       )}
@@ -264,12 +266,13 @@ export function EmptyState({
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useI18n();
   return (
     <EmptyState
       icon="cloud-offline-outline"
-      title="Не удалось загрузить"
+      title={t('common.loadFailed')}
       text={message}
-      action={onRetry ? { title: 'Повторить', onPress: onRetry } : undefined}
+      action={onRetry ? { title: t('common.retry'), onPress: onRetry } : undefined}
     />
   );
 }
@@ -291,7 +294,20 @@ export function SectionTitle({ children }: { children: ReactNode }) {
   );
 }
 
+/** Small red counter (unread messages, new listings…). Renders nothing for 0. */
+export function Badge({ n, style }: { n: number; style?: StyleProp<ViewStyle> }) {
+  const c = useColors();
+  if (!n) return null;
+  return (
+    <View style={[styles.badge, { backgroundColor: c.danger }, style]}>
+      <Text style={styles.badgeText}>{n > 99 ? '99+' : n}</Text>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
+  badge: { minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
+  badgeText: { color: '#fff', fontSize: 12, fontWeight: '700' },
   title: { fontSize: 28, fontWeight: '700', letterSpacing: -0.4 },
   h2: { fontSize: 22, fontWeight: '700', letterSpacing: -0.2 },
   h3: { fontSize: 17, fontWeight: '600' },

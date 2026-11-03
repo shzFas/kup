@@ -3,7 +3,9 @@ import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'reac
 import { Ionicons } from '@expo/vector-icons';
 import { formatNumber, type FilterDef, type FilterValue } from '@kup/shared';
 import { parseNumber } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
+import { HintButton } from '../Hint';
 import { CheckRow } from '../Check';
 import { Chip, T } from '../ui';
 
@@ -11,8 +13,22 @@ type OnChange = (v: FilterValue | undefined) => void;
 
 const fmt = (n: number | undefined) => (n == null ? '' : formatNumber(n));
 
+/** Filter label with an optional ⓘ hint button. */
+function Label({ def, suffix }: { def: FilterDef; suffix?: string }) {
+  return (
+    <View style={styles.labelRow}>
+      <T style={{ fontWeight: '600', flexShrink: 1 }}>
+        {def.label}
+        {suffix ? <T color="tertiary">{suffix}</T> : null}
+      </T>
+      <HintButton title={def.label} hint={def.hint} />
+    </View>
+  );
+}
+
 export function RangeWidget({ def, value, onChange }: { def: FilterDef; value?: FilterValue; onChange: OnChange }) {
   const c = useColors();
+  const { t } = useI18n();
   const v = value && !('in' in value) && !('all' in value) && !('eq' in value) ? value : {};
   const [from, setFrom] = useState(fmt(v.gte));
   const [to, setTo] = useState(fmt(v.lte));
@@ -37,7 +53,7 @@ export function RangeWidget({ def, value, onChange }: { def: FilterDef; value?: 
   const input = (side: 'gte' | 'lte', text: string, set: (s: string) => void) => (
     <View style={[styles.input, { backgroundColor: c.fill }]}>
       <T color="tertiary" variant="small">
-        {side === 'gte' ? 'от' : 'до'}
+        {side === 'gte' ? t('filters.from') : t('filters.to')}
       </T>
       <TextInput
         value={text}
@@ -60,10 +76,7 @@ export function RangeWidget({ def, value, onChange }: { def: FilterDef; value?: 
 
   return (
     <View style={styles.block}>
-      <T style={styles.label}>
-        {def.label}
-        <T color="tertiary">{unit}</T>
-      </T>
+      <Label def={def} suffix={unit} />
       <View style={{ flexDirection: 'row', gap: 8 }}>
         {input('gte', from, setFrom)}
         {input('lte', to, setTo)}
@@ -75,7 +88,7 @@ export function RangeWidget({ def, value, onChange }: { def: FilterDef; value?: 
             return (
               <Chip
                 key={p}
-                label={`${focus === 'gte' ? 'от' : 'до'} ${formatNumber(p)}`}
+                label={`${focus === 'gte' ? t('filters.from') : t('filters.to')} ${formatNumber(p)}`}
                 active={active}
                 onPress={() => {
                   if (focus === 'gte') emit(v.gte === p ? undefined : p, v.lte);
@@ -104,6 +117,7 @@ export function MultiWidget({
   counts?: Record<string, number>;
 }) {
   const [expanded, setExpanded] = useState(false);
+  const { t } = useI18n();
   const all = def.widget === 'multi_all';
   const selected = value && 'in' in value ? value.in : value && 'all' in value ? value.all : [];
   const options = def.options ?? [];
@@ -115,10 +129,10 @@ export function MultiWidget({
   };
   return (
     <View style={styles.block}>
-      <T style={styles.label}>{def.label}</T>
+      <Label def={def} />
       {all && (
         <T variant="caption" color="tertiary" style={{ marginTop: -4, marginBottom: 2 }}>
-          Должны быть все отмеченные
+          {t('filters.mustAll')}
         </T>
       )}
       {shown.map((o) => (
@@ -133,7 +147,7 @@ export function MultiWidget({
       {shown.length < options.length && <ShowAll onPress={() => setExpanded(true)} n={options.length} />}
       {expanded && options.length > COLLAPSED + 2 && (
         <Pressable onPress={() => setExpanded(false)} style={{ paddingVertical: 8 }}>
-          <T color="accent">Свернуть</T>
+          <T color="accent">{t('common.collapse')}</T>
         </Pressable>
       )}
     </View>
@@ -141,9 +155,10 @@ export function MultiWidget({
 }
 
 function ShowAll({ onPress, n }: { onPress: () => void; n: number }) {
+  const { t } = useI18n();
   return (
     <Pressable onPress={onPress} style={{ paddingVertical: 8 }}>
-      <T color="accent">Показать все ({n})</T>
+      <T color="accent">{t('common.showAll', { n })}</T>
     </Pressable>
   );
 }
@@ -153,18 +168,22 @@ export function ToggleWidget({ def, value, onChange }: { def: FilterDef; value?:
   const on = !!value && 'eq' in value && value.eq === true;
   return (
     <Pressable style={[styles.block, styles.toggle]} onPress={() => onChange(on ? undefined : { eq: true })}>
-      <T style={{ flex: 1 }}>{def.label}</T>
+      <View style={[styles.labelRow, { flex: 1, marginBottom: 0 }]}>
+        <T style={{ flexShrink: 1 }}>{def.label}</T>
+        <HintButton title={def.label} hint={def.hint} />
+      </View>
       <Switch value={on} onValueChange={(x) => onChange(x ? { eq: true } : undefined)} trackColor={{ true: c.accent }} />
     </Pressable>
   );
 }
 
 export function SelectWidget({ def, value, onChange }: { def: FilterDef; value?: FilterValue; onChange: OnChange }) {
+  const { t } = useI18n();
   const cur = value && 'eq' in value ? String(value.eq) : '';
-  const options = [{ value: '', label: 'Любой' }, ...(def.options ?? [])];
+  const options = [{ value: '', label: t('filters.any') }, ...(def.options ?? [])];
   return (
     <View style={styles.block}>
-      <T style={styles.label}>{def.label}</T>
+      <Label def={def} />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
         {options.map((o) => (
           <Chip key={o.value || '_any'} label={o.label} active={cur === o.value} onPress={() => onChange(o.value ? { eq: o.value } : undefined)} />
@@ -190,15 +209,19 @@ export function RefWidget({
   onClear: () => void;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const ids = value && 'in' in value ? value.in : [];
   const summary = ids.map((id) => names[id] ?? id).join(', ');
   const disabled = !!disabledHint;
   return (
     <Pressable onPress={disabled ? undefined : onOpen} style={({ pressed }) => [styles.block, styles.ref, { opacity: disabled ? 0.45 : pressed ? 0.6 : 1 }]}>
       <View style={{ flex: 1 }}>
-        <T variant={ids.length ? 'small' : 'body'} color={ids.length ? 'secondary' : undefined}>
-          {def.label}
-        </T>
+        <View style={[styles.labelRow, { marginBottom: 0 }]}>
+          <T variant={ids.length ? 'small' : 'body'} color={ids.length ? 'secondary' : undefined}>
+            {def.label}
+          </T>
+          <HintButton title={def.label} hint={def.hint} size={16} />
+        </View>
         {ids.length > 0 ? (
           <T numberOfLines={2}>{summary}</T>
         ) : disabled ? (
@@ -208,7 +231,7 @@ export function RefWidget({
         ) : null}
       </View>
       {ids.length > 0 ? (
-        <Pressable hitSlop={10} onPress={onClear} accessibilityLabel={`Сбросить ${def.label}`}>
+        <Pressable hitSlop={10} onPress={onClear} accessibilityLabel={t('common.clear', { label: def.label })}>
           <Ionicons name="close-circle" size={20} color={c.textTertiary} />
         </Pressable>
       ) : (
@@ -220,7 +243,7 @@ export function RefWidget({
 
 const styles = StyleSheet.create({
   block: { paddingHorizontal: 16, paddingVertical: 10 },
-  label: { fontWeight: '600', marginBottom: 8 },
+  labelRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   input: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: radius.s, paddingHorizontal: 12, height: 44 },
   inputText: { flex: 1, fontSize: 16, height: 44 },
   toggle: { flexDirection: 'row', alignItems: 'center', minHeight: 50 },

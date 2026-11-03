@@ -6,6 +6,7 @@ import { ApiError, errorMessage } from '@/lib/api';
 import { openPicker } from '@/lib/picker';
 import { orderedGroups } from '@/lib/queries';
 import { rememberRefNames, useRefNames } from '@/lib/refNames';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
 import { Button, Divider, T } from '../ui';
 import { AttributeField, FieldError, FieldLabel, SelectRow, type FormValues } from './AttributeField';
@@ -56,6 +57,7 @@ export function ListingForm({
   onSubmit: (input: ListingInput) => Promise<Listing>;
 }) {
   const c = useColors();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const names = useRefNames();
   const scroll = useRef<ScrollViewInstance>(null);
@@ -110,7 +112,7 @@ export function ListingForm({
 
   const openCity = () =>
     openPicker({
-      title: 'Город',
+      title: t('form.city'),
       ref: 'city',
       multi: false,
       selected: city ? [city] : [],
@@ -153,29 +155,29 @@ export function ListingForm({
 
   const validate = () => {
     const e: Record<string, string> = {};
-    for (const a of visible) if (a.required && isEmpty(values[a.key])) e[`attributes.${a.key}`] = 'Обязательное поле';
+    for (const a of visible) if (a.required && isEmpty(values[a.key])) e[`attributes.${a.key}`] = t('common.required');
     const p = parseNumber(price);
-    if (p == null || p <= 0) e.price = 'Укажите цену';
-    if (!city) e.city = 'Выберите город';
+    if (p == null || p <= 0) e.price = t('form.enterPrice');
+    if (!city) e.city = t('form.chooseCity');
     return e;
   };
 
   const submit = async () => {
     setBanner('');
     if (photos.some((p) => p.status === 'uploading')) {
-      Alert.alert('Фото ещё загружаются', 'Подождите пару секунд и попробуйте снова.');
+      Alert.alert(t('form.photosUploadingTitle'), t('form.photosUploadingText'));
       return;
     }
     const local = validate();
     setErrors(local);
     if (Object.keys(local).length) {
-      setBanner('Заполните обязательные поля');
+      setBanner(t('form.fillRequired'));
       return;
     }
     const input: ListingInput = {
       category: schema.category,
       price: Math.round(parseNumber(price)!),
-      currency: 'KZT',
+      currency: 'CZK',
       city: city!,
       description: description.trim(),
       photos: photos.filter((p) => p.status === 'done' && p.id).map((p) => p.id!),
@@ -189,7 +191,7 @@ export function ListingForm({
         setErrors(err.fields);
         const known = new Set(['price', 'city', 'description', 'photos', ...visible.map((a) => `attributes.${a.key}`)]);
         const unknown = Object.entries(err.fields).filter(([k]) => !known.has(k));
-        setBanner(unknown.length ? unknown.map(([k, v]) => `${k}: ${v}`).join('\n') : err.message || 'Проверьте поля формы');
+        setBanner(unknown.length ? unknown.map(([k, v]) => `${k}: ${v}`).join('\n') : err.message || t('form.checkFields'));
       } else setBanner(errorMessage(err));
       scroll.current?.scrollTo({ y: 0, animated: true });
     } finally {
@@ -251,11 +253,11 @@ export function ListingForm({
         ))}
 
         <T variant="small" color="secondary" style={styles.groupTitle}>
-          Цена и расположение
+          {t('form.priceAndPlace')}
         </T>
         <View style={[styles.card, { backgroundColor: c.card }]}>
           <View style={styles.field}>
-            <FieldLabel label="Цена" required />
+            <FieldLabel label={t('form.price')} required />
             <View style={[styles.input, { backgroundColor: c.fill, borderColor: errors.price ? c.danger : 'transparent' }]}>
               <TextInput
                 value={price}
@@ -269,13 +271,13 @@ export function ListingForm({
                 placeholderTextColor={c.textTertiary}
                 style={[styles.inputText, { color: c.text }]}
               />
-              <T color="tertiary">₸</T>
+              <T color="tertiary">Kč</T>
             </View>
-            <FieldError error={errors.price || undefined} />
+            <FieldError error={errors.price || undefined} hint={t('form.priceHint')} />
           </View>
           <Divider />
           <SelectRow
-            label="Город"
+            label={t('form.city')}
             required
             value={city ? (names[city] ?? city) : undefined}
             onPress={openCity}
@@ -284,7 +286,7 @@ export function ListingForm({
         </View>
 
         <T variant="small" color="secondary" style={styles.groupTitle}>
-          Описание
+          {t('form.description')}
         </T>
         <View style={[styles.card, { backgroundColor: c.card }]}>
           <View style={styles.field}>
@@ -295,13 +297,13 @@ export function ListingForm({
                 clearError('description');
               }}
               multiline
-              placeholder="Расскажите о состоянии, истории, особенностях"
+              placeholder={t('form.descriptionPlaceholder')}
               placeholderTextColor={c.textTertiary}
               style={[styles.textarea, { backgroundColor: c.fill, color: c.text, borderColor: errors.description ? c.danger : 'transparent' }]}
               textAlignVertical="top"
               maxLength={4000}
             />
-            <FieldError error={errors.description || undefined} />
+            <FieldError error={errors.description || undefined} hint={t('form.descriptionHint')} />
           </View>
         </View>
       </ScrollView>

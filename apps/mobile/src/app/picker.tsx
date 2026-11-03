@@ -10,6 +10,7 @@ import { useRefs } from '@/lib/queries';
 import { useRefNames } from '@/lib/refNames';
 import { useStore } from '@/lib/store';
 import { useDebounced } from '@/lib/useDebounced';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
 import { CheckRow } from '@/components/Check';
 import { Button, Divider, EmptyState, ErrorState, Loading, T } from '@/components/ui';
@@ -17,6 +18,7 @@ import { Button, Divider, EmptyState, ErrorState, Loading, T } from '@/component
 export default function PickerScreen() {
   const req = useStore(pickerStore, (s) => s);
   const c = useColors();
+  const { t } = useI18n();
   const insets = useSafeAreaInsets();
   const [q, setQ] = useState('');
   const dq = useDebounced(q.trim(), 250);
@@ -33,7 +35,7 @@ export default function PickerScreen() {
   }, [refs.data, req, dq]);
 
   if (!req) {
-    return <EmptyState title="Нечего выбирать" action={{ title: 'Назад', onPress: () => router.back() }} />;
+    return <EmptyState title={t('common.nothingToPick')} action={{ title: t('common.back'), onPress: () => router.back() }} />;
   }
 
   const finish = (ids: string[], picked: RefItem[]) => {
@@ -53,13 +55,13 @@ export default function PickerScreen() {
           title: req.title,
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={10}>
-              <T color="accent">Отмена</T>
+              <T color="accent">{t('common.cancel')}</T>
             </Pressable>
           ),
           headerRight: () =>
             selected.length > 0 ? (
               <Pressable onPress={() => (req.multi ? setSelected([]) : finish([], []))} hitSlop={10}>
-                <T color="accent">Сбросить</T>
+                <T color="accent">{t('common.reset')}</T>
               </Pressable>
             ) : null,
         }}
@@ -69,7 +71,7 @@ export default function PickerScreen() {
         <TextInput
           value={q}
           onChangeText={setQ}
-          placeholder="Поиск"
+          placeholder={t('common.search')}
           placeholderTextColor={c.textTertiary}
           autoCorrect={false}
           clearButtonMode="while-editing"
@@ -100,13 +102,13 @@ export default function PickerScreen() {
               />
             </View>
           )}
-          ListEmptyComponent={<EmptyState title="Ничего не найдено" text={q ? 'Попробуйте другое написание' : undefined} />}
+          ListEmptyComponent={<EmptyState title={t('common.nothingFound')} text={q ? t('common.tryOtherSpelling') : undefined} />}
         />
       )}
       {req.multi && (
         <View style={[styles.footer, { paddingBottom: insets.bottom + 10, backgroundColor: c.card, borderTopColor: c.border }]}>
           <Button
-            title={selected.length ? `Готово (${selected.length})` : 'Готово'}
+            title={selected.length ? t('common.doneCount', { n: selected.length }) : t('common.done')}
             onPress={() =>
               finish(
                 selected,

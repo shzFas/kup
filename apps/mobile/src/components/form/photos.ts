@@ -2,6 +2,7 @@ import { Alert } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { api } from '@/lib/api';
+import { i18n } from '@/lib/i18n';
 
 export const MAX_PHOTOS = 20;
 const MAX_SIDE = 2560;
@@ -21,18 +22,19 @@ export function photoIdFromUrl(url: string): string {
 
 /** Ask for the source and return picked assets (images only). */
 export async function pickPhotos(remaining: number): Promise<ImagePicker.ImagePickerAsset[]> {
+  const { t } = i18n();
   const source = await new Promise<'library' | 'camera' | null>((resolve) =>
-    Alert.alert('Добавить фото', undefined, [
-      { text: 'Выбрать из галереи', onPress: () => resolve('library') },
-      { text: 'Сделать снимок', onPress: () => resolve('camera') },
-      { text: 'Отмена', style: 'cancel', onPress: () => resolve(null) },
+    Alert.alert(t('form.addPhotoTitle'), undefined, [
+      { text: t('form.fromLibrary'), onPress: () => resolve('library') },
+      { text: t('form.takePhoto'), onPress: () => resolve('camera') },
+      { text: t('common.cancel'), style: 'cancel', onPress: () => resolve(null) },
     ]),
   );
   if (!source) return [];
   if (source === 'camera') {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      Alert.alert('Нет доступа к камере', 'Разрешите доступ в настройках телефона.');
+      Alert.alert(t('form.noCamera'), t('form.noCameraText'));
       return [];
     }
     const r = await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], quality: 0.85 });

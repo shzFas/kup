@@ -1,28 +1,25 @@
 import { useEffect, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View, type TextInputInstance } from 'react-native';
 import { router, Stack } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { api, ApiError, errorMessage } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { resetFavoriteOverrides } from '@/lib/favorites';
+import { useI18n } from '@/lib/i18n';
+import { COUNTRIES, countryName, DEFAULT_COUNTRY, isComplete, maskDigits, parseInput, placeholder, toE164, type Country } from '@/lib/phone';
 import { radius, useColors } from '@/lib/theme';
+import { CheckRow } from '@/components/Check';
+import { Sheet } from '@/components/Sheet';
 import { Button, T } from '@/components/ui';
-
-/** "7011234567" → "(701) 123-45-67" */
-function maskPhone(d: string) {
-  let s = '';
-  if (d.length > 0) s += '(' + d.slice(0, 3);
-  if (d.length >= 3) s += ') ';
-  if (d.length > 3) s += d.slice(3, 6);
-  if (d.length > 6) s += '-' + d.slice(6, 8);
-  if (d.length > 8) s += '-' + d.slice(8, 10);
-  return s;
-}
 
 export default function LoginScreen() {
   const c = useColors();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const { setUser } = useAuth();
+  const [country, setCountry] = useState<Country>(DEFAULT_COUNTRY);
+  const [countryOpen, setCountryOpen] = useState(false);
   const [digits, setDigits] = useState('');
   const [step, setStep] = useState<'phone' | 'code'>('phone');
   const [code, setCode] = useState('');
@@ -31,7 +28,8 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
   const [retryIn, setRetryIn] = useState(0);
   const codeRef = useRef<TextInputInstance>(null);
-  const phone = '+7' + digits;
+  const phone = toE164(country, digits);
+  const pretty = `+${country.code} ${maskDigits(country, digits)}`;
 
   useEffect(() => {
     if (retryIn <= 0) return;
@@ -52,7 +50,7 @@ export default function LoginScreen() {
     } catch (e) {
       if (e instanceof ApiError && e.status === 429) {
         setStep('code');
-        setError('Код уже отправлен. Повторно запросить можно чуть позже.');
+        setError(t('login.alreadySent'));
       } else setError(errorMessage(e));
     } finally {
       setLoading(false);
@@ -71,7 +69,7 @@ export default function LoginScreen() {
       qc.invalidateQueries();
       router.back();
     } catch (e) {
-      setError(e instanceof ApiError && e.code === 'invalid_code' ? 'Неверный код' : errorMessage(e));
+      setError(e instanceof ApiError && e.code === 'invalid_code' ? t('login.invalidCode') : errorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -81,10 +79,10 @@ export default function LoginScreen() {
     <KeyboardAvoidingView style={{ flex: 1, backgroundColor: c.card }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <Stack.Screen
         options={{
-          title: 'Вход',
+          title: t('nav.login'),
           headerLeft: () => (
             <Pressable onPress={() => router.back()} hitSlop={10}>
-              <T color="accent">Отмена</T>
+              <T color="accent">{t('common.cancel')}</T>
             </Pressable>
           ),
         }}
@@ -92,47 +90,56 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
         {step === 'phone' ? (
           <>
-            <T variant="h2">Вход или регистрация</T>
-            <T color="secondary">Мы отправим код подтверждения в SMS</T>
+            <T variant="h2">{t('login.title')}</T>
+            <T color="secondary">{t('login.subtitle')}</T>
             <View style={[styles.field, { backgroundColor: c.fill }]}>
-              <T style={styles.prefix}>+7</T>
+              <Pressable
+                onPress={() => setCountryOpen(true)}
+                style={styles.country}
+                hitSlop={6}
+                accessibilityRole="button"
+                accessibilityLabel={`${t('login.country')}: ${t(countryName(country))}`}>
+                <T style={styles.flag}>{country.flag}</T>
+                <T style={styles.prefix}>+{country.code}</T>
+                <Ionicons name="chevron-down" size={16} color={c.textSecondary} />
+              </Pressable>
+              <View style={[styles.sep, { backgroundColor: c.border }]} />
               <TextInput
                 autoFocus
-                value={maskPhone(digits)}
-                onChangeText={(t) => {
-                  let d = t.replace(/\D/g, '');
-                  // Pasted full number: drop leading 7/8.
-                  if (d.length > 10 && (d.startsWith('7') || d.startsWith('8'))) d = d.slice(1);
-                  setDigits(d.slice(0, 10));
+                value={maskDigits(country, digits)}
+                onChangeText={(text) => {
+                  const r = parseInput(country, text);
+                  setCountry(r.country);
+                  setDigits(r.digits);
                   setError('');
                 }}
                 keyboardType="phone-pad"
                 textContentType="telephoneNumber"
                 autoComplete="tel"
-                placeholder="(700) 000-00-00"
+                placeholder={placeholder(country)}
                 placeholderTextColor={c.textTertiary}
                 style={[styles.input, { color: c.text }]}
               />
             </View>
             {!!error && <T color="danger">{error}</T>}
-            <Button title="Получить код" onPress={requestCode} loading={loading} disabled={digits.length !== 10} />
+            <Button title={t('login.getCode')} onPress={requestCode} loading={loading} disabled={!isComplete(country, digits)} />
           </>
         ) : (
           <>
-            <T variant="h2">Введите код</T>
-            <T color="secondary">Отправили на +7 {maskPhone(digits)}</T>
+            <T variant="h2">{t('login.enterCode')}</T>
+            <T color="secondary">{t('login.sentTo', { phone: pretty })}</T>
             {devCode && (
               <View style={[styles.hint, { backgroundColor: c.accentSoft }]}>
                 <T variant="small" color="accent">
-                  Режим разработки: код {devCode} подставлен автоматически
+                  {t('login.devCode', { code: devCode })}
                 </T>
               </View>
             )}
             <TextInput
               ref={codeRef}
               value={code}
-              onChangeText={(t) => {
-                const v = t.replace(/\D/g, '').slice(0, 6);
+              onChangeText={(text) => {
+                const v = text.replace(/\D/g, '').slice(0, 6);
                 setCode(v);
                 setError('');
                 if (devCode ? v.length === devCode.length : v.length === 4) verify(v);
@@ -146,22 +153,40 @@ export default function LoginScreen() {
               maxLength={6}
             />
             {!!error && <T color="danger">{error}</T>}
-            <Button title="Войти" onPress={() => verify()} loading={loading} disabled={code.length < 4} />
+            <Button title={t('login.signIn')} onPress={() => verify()} loading={loading} disabled={code.length < 4} />
             <View style={styles.links}>
               <Pressable onPress={() => (setStep('phone'), setCode(''), setError(''))}>
-                <T color="accent">Изменить номер</T>
+                <T color="accent">{t('login.changeNumber')}</T>
               </Pressable>
               {retryIn > 0 ? (
-                <T color="tertiary">Повторно через {retryIn} с</T>
+                <T color="tertiary">{t('login.retryIn', { n: retryIn })}</T>
               ) : (
                 <Pressable onPress={requestCode}>
-                  <T color="accent">Отправить ещё раз</T>
+                  <T color="accent">{t('login.resend')}</T>
                 </Pressable>
               )}
             </View>
           </>
         )}
       </ScrollView>
+      <Sheet visible={countryOpen} onClose={() => setCountryOpen(false)} title={t('login.country')}>
+        <ScrollView style={{ maxHeight: 480 }} contentContainerStyle={{ paddingHorizontal: 16 }}>
+          {COUNTRIES.map((x) => (
+            <CheckRow
+              key={x.iso}
+              radio
+              checked={x.iso === country.iso}
+              label={`${x.flag}  ${t(countryName(x))}`}
+              subtitle={`+${x.code}`}
+              onPress={() => {
+                setCountry(x);
+                setDigits((d) => d.slice(0, Math.max(...x.lengths)));
+                setCountryOpen(false);
+              }}
+            />
+          ))}
+        </ScrollView>
+      </Sheet>
     </KeyboardAvoidingView>
   );
 }
@@ -169,7 +194,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   content: { padding: 20, gap: 14 },
   field: { flexDirection: 'row', alignItems: 'center', borderRadius: radius.m, paddingHorizontal: 14, height: 54, marginTop: 8 },
-  prefix: { fontSize: 20, fontWeight: '500', marginRight: 8 },
+  country: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 54 },
+  flag: { fontSize: 22 },
+  prefix: { fontSize: 20, fontWeight: '500' },
+  sep: { width: StyleSheet.hairlineWidth, height: 28, marginHorizontal: 10 },
   input: { flex: 1, fontSize: 20, height: 54, letterSpacing: 0.5 },
   code: { height: 60, borderRadius: radius.m, fontSize: 28, textAlign: 'center', letterSpacing: 12, marginTop: 8 },
   hint: { padding: 12, borderRadius: radius.m },

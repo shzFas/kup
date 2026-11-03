@@ -12,7 +12,11 @@
       "bundleIdentifier": "kz.kup.app",
       "supportsTablet": false,
       "infoPlist": {
-        "NSAppTransportSecurity": { "NSAllowsArbitraryLoads": true, "NSAllowsLocalNetworking": true }
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSAllowsLocalNetworking": true
+        },
+        "CFBundleAllowMixedLocalizations": true
       }
     },
     "android": {
@@ -47,11 +51,18 @@
           "photosPermission": "Разрешите доступ к фото, чтобы добавить их в объявление.",
           "cameraPermission": "Разрешите доступ к камере, чтобы сфотографировать товар."
         }
-      ]
+      ],
+      "expo-localization"
     ],
     "experiments": {
       "typedRoutes": false,
       "reactCompiler": true
+    },
+    "locales": {
+      "ru": "./locales/ru.json",
+      "uk": "./locales/uk.json",
+      "cs": "./locales/cs.json",
+      "en": "./locales/en.json"
     }
   }
 }

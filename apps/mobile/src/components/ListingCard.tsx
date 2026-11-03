@@ -3,17 +3,17 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import { formatPrice, type ListingCard as Card } from '@kup/shared';
+import type { ListingCard as Card } from '@kup/shared';
 import { mediaUrl } from '@/lib/api';
 import { useIsFavorite, useToggleFavorite } from '@/lib/favorites';
-import { formatDate } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
+import { STATUS_SHORT } from '@/lib/status';
 import { radius, useColors } from '@/lib/theme';
 import { Skeleton, T } from './ui';
 
-const STATUS_LABEL: Record<Card['status'], string> = { active: 'Активно', archived: 'В архиве', sold: 'Продано' };
-
 function ListingCardImpl({ item, showStatus, compact }: { item: Card; showStatus?: boolean; compact?: boolean }) {
   const c = useColors();
+  const { t, price, date } = useI18n();
   const fav = useIsFavorite(item.id, item.is_favorite);
   const toggle = useToggleFavorite();
   const cover = item.photos[0];
@@ -42,12 +42,12 @@ function ListingCardImpl({ item, showStatus, compact }: { item: Card; showStatus
           hitSlop={8}
           onPress={() => toggle(item.id, fav)}
           style={styles.heart}
-          accessibilityLabel={fav ? 'Убрать из избранного' : 'В избранное'}>
+          accessibilityLabel={fav ? t('card.removeFavorite') : t('card.addFavorite')}>
           <Ionicons name={fav ? 'heart' : 'heart-outline'} size={22} color={fav ? '#FF3B5C' : '#fff'} />
         </Pressable>
       </View>
       <View style={[styles.body, compact && { flex: 1 }]}>
-        <T variant="price">{formatPrice(item.price, item.currency, item.price_suffix)}</T>
+        <T variant="price">{price(item.price, item.currency, item.price_suffix)}</T>
         <T numberOfLines={2} style={{ fontWeight: '500' }}>
           {item.title}
         </T>
@@ -57,12 +57,12 @@ function ListingCardImpl({ item, showStatus, compact }: { item: Card; showStatus
           </T>
         )}
         <T variant="caption" color="tertiary" numberOfLines={1}>
-          {[item.city?.name, formatDate(item.published_at)].filter(Boolean).join(' · ')}
+          {[item.city?.name, date(item.published_at)].filter(Boolean).join(' · ')}
         </T>
         {showStatus && item.status !== 'active' && (
-          <View style={[styles.status, { backgroundColor: c.fill }]}>
-            <T variant="caption" color="secondary">
-              {STATUS_LABEL[item.status]}
+          <View style={[styles.status, { backgroundColor: item.status === 'blocked' ? c.danger : c.fill }]}>
+            <T variant="caption" color={item.status === 'blocked' ? 'inverse' : 'secondary'}>
+              {t(STATUS_SHORT[item.status])}
             </T>
           </View>
         )}

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Alert, Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { FlashList } from '@shopify/flash-list';
 import { Ionicons } from '@expo/vector-icons';
 import {
@@ -13,11 +13,13 @@ import {
   type ListingCard as Card,
 } from '@kup/shared';
 import { api, errorMessage } from '@/lib/api';
+import { useRequireAuth } from '@/lib/auth';
+import { keys } from '@/lib/chatCache';
 import { useSchema } from '@/lib/queries';
 import { facetsStore, setSearchState, useFacets, useSearchState, withFilter } from '@/lib/search';
 import { useFilterRefNames } from '@/lib/useFilterRefNames';
 import { openPicker } from '@/lib/picker';
-import { listingsCount } from '@/lib/format';
+import { useI18n } from '@/lib/i18n';
 import { radius, useColors } from '@/lib/theme';
 import { ListingCard, ListingCardSkeleton } from '@/components/ListingCard';
 import { SortSheet } from '@/components/SortSheet';
@@ -29,6 +31,10 @@ export default function SearchScreen() {
   const params = useLocalSearchParams<Record<string, string>>();
   const category = String(params.category);
   const c = useColors();
+  const { t, listings, lang } = useI18n();
+  const qc = useQueryClient();
+  const requireAuth = useRequireAuth();
+  const [saving, setSaving] = useState(false);
   const schema = useSchema(category);
   const defs = useMemo(() => schema.data?.filters ?? [], [schema.data]);
   const state = useSearchState(category);
@@ -40,9 +46,10 @@ export default function SearchScreen() {
   const [applied, setApplied] = useState(false);
   useEffect(() => {
     if (applied || !schema.data) return;
-    const { category: _c, q, sort, ...rest } = params;
+    const { category: _c, q, sort, reset, ...rest } = params;
     const filters = queryToFilters(rest, schema.data.filters);
-    if (q != null || sort != null || Object.keys(filters).length) {
+    // `reset` (saved searches, suggestions) replaces the remembered state even with no filters.
+    if (reset != null || q != null || sort != null || Object.keys(filters).length) {
       setSearchState(category, { query: q ?? '', sort: sort ?? '', filters });
       setText(q ?? '');
     }
@@ -109,7 +116,33 @@ export default function SearchScreen() {
     openFilters();
   };
 
-  const sortLabel = schema.data?.sorts.find((s) => s.value === state.sort)?.label ?? schema.data?.sorts[0]?.label ?? 'Сортировка';
+  const sortLabel = schema.data?.sorts.find((s) => s.value === state.sort)?.label ?? schema.data?.sorts[0]?.label ?? t('search.sort');
+
+  const saveSearch = () =>
+    requireAuth(async () => {
+      if (saving) return;
+      setSaving(true);
+      try {
+        // Descriptive name, e.g. "Мопеды и скутеры: Honda, до 50 000 Kč" (server default is just the category).
+        const parts = defs
+          .filter((d) => state.filters[d.key])
+          .map((d) => filterChipLabel(d, state.filters[d.key], names, lang));
+        if (state.query) parts.unshift(t('saved.query', { q: state.query }));
+        const base = schema.data?.name ?? category;
+        const name = (parts.length ? `${base}: ${parts.slice(0, 4).join(', ')}` : base).slice(0, 100);
+        await api.createSavedSearch({
+          name,
+          request: { category, query: state.query || undefined, filters: state.filters },
+          notify: true,
+        });
+        void qc.invalidateQueries({ queryKey: keys.savedSearches });
+        Alert.alert(t('search.saved'), t('search.savedText'));
+      } catch (e) {
+        Alert.alert(t('search.saveFailed'), errorMessage(e));
+      } finally {
+        setSaving(false);
+      }
+    });
 
   const header = (
     <View style={{ backgroundColor: c.card, paddingBottom: 10 }}>
@@ -122,7 +155,7 @@ export default function SearchScreen() {
             if (!t && state.query) setSearchState(category, { query: '' });
           }}
           onSubmitEditing={() => setSearchState(category, { query: text.trim() })}
-          placeholder={schema.data ? `Поиск: ${schema.data.name.toLowerCase()}` : 'Поиск'}
+          placeholder={schema.data ? t('search.placeholderIn', { category: schema.data.name.toLocaleLowerCase() }) : t('common.search')}
           placeholderTextColor={c.textTertiary}
           returnKeyType="search"
           clearButtonMode="while-editing"
@@ -130,14 +163,14 @@ export default function SearchScreen() {
         />
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
-        <Chip icon="options-outline" label={activeCount ? `Фильтры (${activeCount})` : 'Фильтры'} active={activeCount > 0} onPress={openFilters} />
+        <Chip icon="options-outline" label={activeCount ? t('search.filtersN', { n: activeCount }) : t('search.filters')} active={activeCount > 0} onPress={openFilters} />
         {!schema.data && [0, 1, 2].map((i) => <Skeleton key={i} style={{ width: 90, height: 34, borderRadius: 17 }} />)}
         {pinned.map((d) => {
           const f = state.filters[d.key];
           return (
             <Chip
               key={d.key}
-              label={f ? filterChipLabel(d, f, names) : d.label}
+              label={f ? filterChipLabel(d, f, names, lang) : d.label}
               active={!!f}
               onPress={() => onPinned(d)}
               onRemove={f && d.widget !== 'toggle' ? () => setFilter(d.key, undefined) : undefined}
@@ -148,21 +181,27 @@ export default function SearchScreen() {
           <Chip
             key={d.key}
             active
-            label={filterChipLabel(d, state.filters[d.key], names)}
+            label={filterChipLabel(d, state.filters[d.key], names, lang)}
             onPress={openFilters}
             onRemove={() => setFilter(d.key, undefined)}
           />
         ))}
-        {activeCount > 1 && <Chip label="Сбросить всё" onPress={() => setSearchState(category, { filters: {} })} />}
+        {activeCount > 1 && <Chip label={t('search.resetAll')} onPress={() => setSearchState(category, { filters: {} })} />}
       </ScrollView>
     </View>
   );
 
   const bar = (
     <View style={styles.bar}>
-      <T variant="small" color="secondary">
-        {first ? `Найдено ${listingsCount(first.total)}` : ' '}
+      <T variant="small" color="secondary" style={{ flex: 1 }} numberOfLines={1}>
+        {first ? t('search.found', { count: listings(first.total) }) : ' '}
       </T>
+      <Pressable onPress={saveSearch} style={styles.sortBtn} hitSlop={8} disabled={saving}>
+        <Ionicons name="bookmark-outline" size={16} color={c.accent} />
+        <T variant="small" color="accent" numberOfLines={1}>
+          {t('search.save')}
+        </T>
+      </Pressable>
       {schema.data && schema.data.sorts.length > 0 && (
         <Pressable onPress={() => setSortOpen(true)} style={styles.sortBtn} hitSlop={8}>
           <Ionicons name="swap-vertical" size={16} color={c.accent} />
@@ -199,9 +238,9 @@ export default function SearchScreen() {
             </View>
           ) : (
             <EmptyState
-              title="Ничего не нашлось"
-              text="Попробуйте изменить запрос или ослабить фильтры"
-              action={activeCount ? { title: 'Сбросить фильтры', onPress: () => setSearchState(category, { filters: {} }) } : undefined}
+              title={t('search.emptyTitle')}
+              text={t('search.emptyText')}
+              action={activeCount ? { title: t('search.resetFilters'), onPress: () => setSearchState(category, { filters: {} }) } : undefined}
             />
           )
         }
@@ -211,7 +250,7 @@ export default function SearchScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.background }}>
-      <Stack.Screen options={{ title: schema.data?.name ?? 'Поиск' }} />
+      <Stack.Screen options={{ title: schema.data?.name ?? t('nav.search') }} />
       {header}
       <View style={{ flex: 1 }}>{body}</View>
       {schema.data && (

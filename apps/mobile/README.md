@@ -26,7 +26,7 @@ npm start                 # i — iOS-симулятор, a — Android-эмул
 Все npm-скрипты запускают Expo с `EXPO_NO_TELEMETRY=1`. Приложение не использует сторонние
 сервисы (push, EAS Update, аналитика, удалённые шрифты, карты): только собственный API.
 
-Нативные модули (secure-store, image-picker, image-manipulator) входят в Expo Go; для
+Нативные модули (secure-store, image-picker, image-manipulator, localization) входят в Expo Go; для
 production-сборки — `npx expo run:ios|android` (локально, без EAS).
 
 ## Проверки
@@ -41,15 +41,24 @@ rm -rf dist
 ## Структура
 
 - `src/app` — экраны (Expo Router):
-  - `(tabs)` — Поиск, Избранное, Подать, Мои, Профиль
-  - `search/[category]` — выдача: быстрые фильтры, чипы активных фильтров, сортировка, бесконечная лента
-  - `filters/[category]` — модальный экран фильтров из `schema.filters` + «Показать N объявлений»
+  - `(tabs)` — Поиск · Избранное (Объявления | Поиски) · Подать (+) · Сообщения · Профиль
+  - `(tabs)/profile/*` — стек профиля: профиль (язык, выход), «Мои объявления», «Сохранённые поиски», «Уведомления» (с бейджами)
+  - `search/[category]` — выдача: быстрые фильтры, чипы, сортировка, «Сохранить поиск», бесконечная лента
+  - `filters/[category]` — модальный экран фильтров из `schema.filters` (ⓘ — подсказка `hint`) + «Показать N объявлений»
   - `picker` — выбор значений справочника (`/v1/refs/{ref}`), одиночный и множественный
-  - `listing/[id]` — карточка объявления; `post/[category]`, `edit/[id]` — форма подачи/редактирования
-  - `login` — вход по номеру телефона и SMS-коду (в dev подставляется `dev_code`)
-  - `[category]` — deep link `kup://cars?make=toyota&year=2015..2020` → выдача
+  - `listing/[id]` — карточка: история цены, «Похожие», «Позвонить» + «Написать» (шаблоны → чат), «Пожаловаться»,
+    «Продавец говорит: …», баннеры владельца (истёк срок / заблокировано) и «Продлить»
+  - `chat/[id]` — диалог: перевёрнутый список, ✓/✓✓, подгрузка истории, оптимистичная отправка
+  - `post/[category]`, `edit/[id]` — форма подачи/редактирования (цена в Kč, подсказки под полями)
+  - `login` — вход по номеру телефона (выбор страны, по умолчанию +420) и SMS-коду (в dev подставляется `dev_code`)
+  - `[category]` — deep link `kup://cars?make=skoda&year=2015..2020` → выдача
 - `src/components/filters` — `FilterRenderer` и виджеты (range, multi, multi_all, toggle, select, ref)
 - `src/components/form` — форма объявления из `schema.attributes`, загрузка фото (JPEG, ≤2560 px)
-- `src/lib` — API-клиент (токены в SecureStore), авторизация, состояние поиска, тема
+- `src/lib` — API-клиент (токены в SecureStore, `Accept-Language`), авторизация, состояние поиска, тема,
+  `events.tsx` (единый WebSocket `/v1/ws`: пауза в фоне, переподключение и обновление счётчиков), `chatCache.ts`
+- `src/i18n` + `src/lib/i18n.ts` — свой i18n: словари `ru` (ключи), `uk`, `cs`, `en`; `useI18n()` → `t()`, `tp()` (множественное
+  число), даты/числа/цены через `Intl` с запасным форматированием. Язык по умолчанию — из локали устройства
+  (`expo-localization` → `pickLang`), выбор в Профиле сохраняется в SecureStore и отправляется в `PATCH /v1/me`;
+  при смене языка кэш React Query инвалидируется (подписи приходят с сервера на нужном языке).
 
-Deep links: `kup://search/cars?make=toyota`, `kup://cars?...`, `kup://listing/<id>`.
+Deep links: `kup://search/cars?make=skoda`, `kup://cars?...`, `kup://listing/<id>`, `kup://chat/<id>`.

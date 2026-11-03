@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
 import { createApi, ApiError } from '@kup/shared';
+import { getLang, i18n } from './i18n';
 
 export const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:8180';
 
@@ -46,19 +47,21 @@ export const api = createApi({
     },
   },
   onLogout: () => logoutListeners.forEach((l) => l()),
+  lang: getLang,
 });
 
 export const mediaUrl = (path: string) => api.mediaUrl(path);
 
 export function errorMessage(e: unknown): string {
+  const { t } = i18n();
   if (e instanceof ApiError) {
-    if (e.status === 429) return 'Слишком много запросов. Попробуйте чуть позже.';
-    if (e.status >= 500) return 'Ошибка сервера. Попробуйте позже.';
-    return e.message || 'Что-то пошло не так';
+    if (e.status === 429) return t('common.tooMany');
+    if (e.status >= 500) return t('common.serverError');
+    return e.message || t('common.somethingWrong');
   }
-  if (e instanceof TypeError) return 'Нет соединения с сервером';
+  if (e instanceof TypeError) return t('common.offline');
   if (e instanceof Error) return e.message;
-  return 'Что-то пошло не так';
+  return t('common.somethingWrong');
 }
 
 export function isAuthError(e: unknown) {

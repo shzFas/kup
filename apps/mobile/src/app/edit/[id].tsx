@@ -6,6 +6,7 @@ import type { Attribute, AttrValue, Listing } from '@kup/shared';
 import { api, errorMessage, mediaUrl } from '@/lib/api';
 import { useSchema } from '@/lib/queries';
 import { rememberRefNames } from '@/lib/refNames';
+import { useI18n } from '@/lib/i18n';
 import { useColors } from '@/lib/theme';
 import { ListingForm, type FormInitial } from '@/components/form/ListingForm';
 import { photoIdFromUrl } from '@/components/form/photos';
@@ -31,6 +32,7 @@ function initialFrom(l: Listing, attrs: Attribute[]): FormInitial {
 export default function EditListingScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useColors();
+  const { t } = useI18n();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['listing', id], queryFn: () => api.listing(id) });
   const schema = useSchema(q.data?.category);
@@ -51,13 +53,13 @@ export default function EditListingScreen() {
   if (q.isPending || (q.data && schema.isPending)) body = <Loading />;
   else if (q.isError) body = <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />;
   else if (schema.isError) body = <ErrorState message={errorMessage(schema.error)} onRetry={() => schema.refetch()} />;
-  else if (!q.data.is_owner) body = <EmptyState icon="lock-closed-outline" title="Нет доступа" text="Редактировать можно только свои объявления" />;
+  else if (!q.data.is_owner) body = <EmptyState icon="lock-closed-outline" title={t('post.noAccess')} text={t('post.onlyOwn')} />;
   else
     body = (
       <ListingForm
         schema={schema.data!}
         initial={initialFrom(q.data, schema.data!.attributes)}
-        submitLabel="Сохранить"
+        submitLabel={t('common.save')}
         onSubmit={async (input) => {
           const { category: _c, ...patch } = input;
           const l = await api.updateListing(id, patch);
