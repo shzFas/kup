@@ -46,6 +46,14 @@ type server struct {
 	secret  []byte
 	devMode bool
 	sms     SMSSender
+	admins  map[string]bool // phones that always get the admin role
+}
+
+func (s *server) roleFor(phone string) string {
+	if s.admins[phone] {
+		return "admin"
+	}
+	return "user"
 }
 
 // SMSSender delivers OTP codes. Production must plug in a self-hosted SMS gateway.
@@ -78,6 +86,12 @@ func main() {
 		secret:  []byte(config.MustString("JWT_SECRET")),
 		devMode: config.Bool("OTP_DEV_MODE", false),
 		sms:     logSender{},
+		admins:  map[string]bool{},
+	}
+	for _, p := range strings.Split(config.String("ADMIN_PHONES", ""), ",") {
+		if p, err := normalizePhone(p); err == nil {
+			s.admins[p] = true
+		}
 	}
 	if s.devMode {
 		slog.Warn("OTP_DEV_MODE is on: codes are returned in API responses. Never enable in production.")
@@ -202,9 +216,9 @@ func (s *server) verifyOTP(w http.ResponseWriter, r *http.Request) error {
 	}
 	var u user
 	err = tx.QueryRow(r.Context(), `
-		INSERT INTO users(id, phone) VALUES ($1,$2)
-		ON CONFLICT (phone) DO UPDATE SET phone=EXCLUDED.phone
-		RETURNING id, phone, name, created_at`, uuid.New(), phone).Scan(&u.ID, &u.Phone, &u.Name, &u.CreatedAt)
+		INSERT INTO users(id, phone, role) VALUES ($1,$2,$3)
+		ON CONFLICT (phone) DO UPDATE SET role = CASE WHEN $3 = 'admin' THEN 'admin' ELSE users.role END
+		RETURNING id, phone, name, role, created_at`, uuid.New(), phone, s.roleFor(phone)).Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -223,6 +237,7 @@ type user struct {
 	ID        string    `json:"id"`
 	Phone     string    `json:"phone"`
 	Name      string    `json:"name"`
+	Role      string    `json:"role"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -234,7 +249,7 @@ type authResponse struct {
 }
 
 func (s *server) issue(ctx context.Context, tx pgx.Tx, u user) (*authResponse, error) {
-	access, err := jwtx.Sign(s.secret, u.ID, accessTTL)
+	access, err := jwtx.Sign(s.secret, u.ID, u.Role, accessTTL)
 	if err != nil {
 		return nil, err
 	}
@@ -289,8 +304,8 @@ func (s *server) refresh(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var u user
-	if err := tx.QueryRow(r.Context(), `SELECT id, phone, name, created_at FROM users WHERE id=$1`, userID).
-		Scan(&u.ID, &u.Phone, &u.Name, &u.CreatedAt); err != nil {
+	if err := tx.QueryRow(r.Context(), `SELECT id, phone, name, role, created_at FROM users WHERE id=$1`, userID).
+		Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.CreatedAt); err != nil {
 		return err
 	}
 	resp, err := s.issue(r.Context(), tx, u)
@@ -329,7 +344,7 @@ func (s *server) loadUser(ctx context.Context, id string) (*user, error) {
 		return nil, httpx.NotFound()
 	}
 	var u user
-	err := s.db.QueryRow(ctx, `SELECT id, phone, name, created_at FROM users WHERE id=$1`, id).Scan(&u.ID, &u.Phone, &u.Name, &u.CreatedAt)
+	err := s.db.QueryRow(ctx, `SELECT id, phone, name, role, created_at FROM users WHERE id=$1`, id).Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.CreatedAt)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.NotFound()
 	}

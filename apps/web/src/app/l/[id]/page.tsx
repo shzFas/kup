@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { formatPrice, type Listing } from "@kup/shared";
-import { getListing, getSchema, isNotFound } from "@/lib/server-api";
+import { getListing, getSchema, isNotFound, serverApi } from "@/lib/server-api";
 import { inCity } from "@/lib/format";
 import { mediaUrl } from "@/lib/config";
 import { ListingView } from "@/components/listing/ListingView";
@@ -42,6 +42,9 @@ export default async function ListingPage({ params }: Props) {
       </div>
     );
   }
-  const schema = await getSchema(l.category).catch(() => null);
-  return <ListingView listing={l} schema={schema} />;
+  const [schema, similar] = await Promise.all([
+    getSchema(l.category).catch(() => null),
+    serverApi().similar(l.id, 8).catch(() => null),
+  ]);
+  return <ListingView listing={l} schema={schema} similar={similar} />;
 }

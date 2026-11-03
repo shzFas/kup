@@ -68,6 +68,7 @@ func main() {
 	r := httpx.NewRouter()
 	r.Method("POST", "/v1/search", httpx.Handler(s.search))
 	r.Method("POST", "/v1/search/count", httpx.Handler(s.count))
+	r.Method("GET", "/v1/search/similar/{id}", httpx.Handler(s.similar))
 	r.Method("POST", "/internal/reindex", httpx.Handler(func(w http.ResponseWriter, r *http.Request) error {
 		if err := s.ms.deleteAll(r.Context()); err != nil {
 			return err
@@ -121,7 +122,7 @@ func (s *server) configureIndex(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	filterable := map[string]bool{"category": true, "_geo": true}
+	filterable := map[string]bool{"id": true, "category": true, "_geo": true}
 	for _, c := range cats {
 		sc, err := s.catalog.Schema(ctx, c)
 		if err != nil {

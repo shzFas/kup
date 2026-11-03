@@ -28,6 +28,8 @@ func main() {
 	catalog := proxy(config.String("CATALOG_URL", "http://catalog:8082"))
 	listings := proxy(config.String("LISTINGS_URL", "http://listings:8083"))
 	search := proxy(config.String("SEARCH_URL", "http://search:8084"))
+	notify := proxy(config.String("NOTIFY_URL", "http://notify:8085"))
+	chat := proxy(config.String("CHAT_URL", "http://chat:8086"))
 	media := mediaProxy(config.String("S3_URL", "http://minio:9000"), config.String("S3_BUCKET", "media"))
 
 	limiter := newIPLimiter(rate.Limit(config.Int("RATE_LIMIT_RPS", 20)), config.Int("RATE_LIMIT_BURST", 60))
@@ -49,7 +51,16 @@ func main() {
 	r.Handle("/v1/refs/*", catalog)
 	r.Handle("/v1/listings", listings)
 	r.Handle("/v1/listings/*", listings)
+	r.Handle("/v1/me/saved-searches", notify)
+	r.Handle("/v1/me/saved-searches/*", notify)
+	r.Handle("/v1/me/notifications", notify)
+	r.Handle("/v1/me/notifications/*", notify)
 	r.Handle("/v1/me/*", listings)
+	r.Handle("/v1/reports", listings)
+	r.Handle("/v1/admin/*", listings)
+	r.Handle("/v1/chats", chat)
+	r.Handle("/v1/chats/*", chat)
+	r.Handle("/v1/ws", chat)
 	r.With(maxBody(12<<20)).Handle("/v1/media/*", listings)
 	r.Handle("/v1/search", search)
 	r.Handle("/v1/search/*", search)
@@ -104,20 +115,40 @@ func mediaProxy(s3URL, bucket string) http.HandlerFunc {
 	}
 }
 
-// withUser replaces any client-sent X-User-ID with the verified token subject.
-// An invalid or expired token is a 401 so clients know to refresh.
+// withUser replaces any client-sent identity headers with the verified token
+// subject and role. An invalid or expired token is a 401 so clients know to refresh.
+// WebSocket clients can't set headers, so /v1/ws takes the token from ?access_token=.
 func withUser(secret []byte) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			r.Header.Del(httpx.UserHeader)
+			r.Header.Del(httpx.RoleHeader)
+			token, hasToken := "", false
 			if h := r.Header.Get("Authorization"); h != "" {
-				token, ok := strings.CutPrefix(h, "Bearer ")
-				uid, err := jwtx.Verify(secret, token)
-				if !ok || err != nil {
+				token, hasToken = strings.CutPrefix(h, "Bearer ")
+				if !hasToken {
+					token, hasToken = "", true // malformed header -> 401 below
+				}
+			} else if r.URL.Path == "/v1/ws" {
+				q := r.URL.Query()
+				token, hasToken = q.Get("access_token"), q.Has("access_token")
+				q.Del("access_token")
+				r.URL.RawQuery = q.Encode()
+			}
+			if hasToken {
+				uid, role, err := jwtx.Verify(secret, token)
+				if err != nil {
+					if r.URL.Path == "/v1/ws" {
+						// Let the upgrade happen so the chat service can close with 4401.
+						r.Header.Set("X-Auth-Failed", "1")
+						next.ServeHTTP(w, r)
+						return
+					}
 					httpx.JSON(w, 401, httpx.ErrorBody{Error: "unauthorized", Message: "Сессия истекла, войдите снова"})
 					return
 				}
 				r.Header.Set(httpx.UserHeader, uid)
+				r.Header.Set(httpx.RoleHeader, role)
 			}
 			next.ServeHTTP(w, r)
 		})

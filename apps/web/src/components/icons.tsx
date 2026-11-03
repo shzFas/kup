@@ -45,3 +45,12 @@ export function CategoryIcon({ icon, size = 28 }: { icon: string; size?: number 
       return (<Svg size={size}><rect x="4" y="4" width="16" height="16" rx="3" /></Svg>);
   }
 }
+
+export const IconChat = (p: P) => (<Svg {...p}><path d="M4 5h16v11H9l-5 4z" /></Svg>);
+export const IconBell = (p: P) => (<Svg {...p}><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" /></Svg>);
+export const IconFlag = (p: P) => (<Svg {...p}><path d="M5 21V4M5 4h11l-2 4 2 4H5" /></Svg>);
+export const IconSend = (p: P) => (<Svg {...p}><path d="M4 12 20 4l-5 16-3-7z" /></Svg>);
+export const IconCheck = (p: P) => (<Svg {...p}><path d="m5 12.5 4.5 4.5L19 7.5" /></Svg>);
+export const IconBookmark = (p: P) => (<Svg {...p}><path d="M6 3h12v18l-6-4.5L6 21z" /></Svg>);
+export const IconShield = (p: P) => (<Svg {...p}><path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6z" /></Svg>);
+export const IconTrendDown = (p: P) => (<Svg {...p}><path d="m3 7 6 6 4-4 8 8M21 11v6h-6" /></Svg>);

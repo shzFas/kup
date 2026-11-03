@@ -21,6 +21,9 @@ import (
 // because they are only reachable from the internal network.
 const UserHeader = "X-User-ID"
 
+// RoleHeader carries the verified role ("user", "moderator", "admin").
+const RoleHeader = "X-User-Role"
+
 type ErrorBody struct {
 	Error   string            `json:"error"`
 	Message string            `json:"message"`
@@ -86,6 +89,18 @@ func Decode(r *http.Request, v any) error {
 }
 
 func UserID(r *http.Request) string { return r.Header.Get(UserHeader) }
+
+// RequireModerator returns the user id of a moderator/admin, or 401/403.
+func RequireModerator(r *http.Request) (string, error) {
+	id, err := RequireUser(r)
+	if err != nil {
+		return "", err
+	}
+	if role := r.Header.Get(RoleHeader); role != "moderator" && role != "admin" {
+		return "", Forbidden()
+	}
+	return id, nil
+}
 
 // RequireUser returns 401 when the gateway did not attach a user.
 func RequireUser(r *http.Request) (string, error) {

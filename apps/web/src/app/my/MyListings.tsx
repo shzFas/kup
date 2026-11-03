@@ -10,8 +10,10 @@ import { IconPlus } from "@/components/icons";
 
 const TABS = [
   { value: "active", label: "Активные", empty: "У вас нет активных объявлений" },
+  { value: "expired", label: "Истёк срок", empty: "Нет объявлений с истёкшим сроком" },
   { value: "archived", label: "Снятые", empty: "Нет снятых с публикации объявлений" },
   { value: "sold", label: "Проданные", empty: "Нет проданных объявлений" },
+  { value: "blocked", label: "Заблокированные", empty: "Нет заблокированных объявлений" },
 ] as const;
 
 type Tab = (typeof TABS)[number]["value"];
@@ -20,12 +22,23 @@ export function MyListings() {
   const [tab, setTab] = useState<Tab>("active");
   const [items, setItems] = useState<ListingCard[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // ListingCard has no moderation_reason / expires_at — fetched from the full listing.
+  const [details, setDetails] = useState<Record<string, { reason: string | null; expires: string | null }>>({});
 
   const load = useCallback(async (t: Tab) => {
     setItems(null);
     setError(null);
     try {
-      setItems(await api().myListings(t));
+      const list = await api().myListings(t);
+      setItems(list);
+      if (t === "blocked") {
+        for (const it of list.slice(0, 50)) {
+          api()
+            .listing(it.id)
+            .then((l) => setDetails((d) => ({ ...d, [it.id]: { reason: l.moderation_reason, expires: l.expires_at } })))
+            .catch(() => {});
+        }
+      }
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -70,7 +83,10 @@ export function MyListings() {
             footer={
               <div className="px-3 pb-3">
                 <OwnerActions
+                  key={`${it.id}:${details[it.id] ? 1 : 0}`}
                   compact
+                  moderationReason={details[it.id]?.reason}
+                  expiresAt={details[it.id]?.expires}
                   isOwner
                   id={it.id}
                   status={it.status}

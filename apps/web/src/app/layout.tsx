@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth";
 import { FavoritesProvider } from "@/lib/favorites";
+import { EventsProvider } from "@/lib/events";
 import { Header } from "@/components/Header";
 import { getCategories } from "@/lib/server-api";
 
@@ -24,6 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen flex flex-col font-sans antialiased">
         <AuthProvider>
           <FavoritesProvider>
+          <EventsProvider>
             <Header categories={categories} />
             <main className="flex-1">{children}</main>
             <footer className="mt-16 border-t border-gray-200 bg-white">
@@ -32,6 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
                 <span>Автомобили · Мотоциклы · Мопеды · Квартиры</span>
               </div>
             </footer>
+          </EventsProvider>
           </FavoritesProvider>
         </AuthProvider>
       </body>

@@ -15,7 +15,12 @@ const (
 	StreamListings  = "LISTINGS"
 	SubjectUpserted = "listings.upserted" // payload: ListingDoc
 	SubjectRemoved  = "listings.removed"  // payload: ListingRemoved
-	ConsumerIndexer = "search-indexer"
+	// Published fires on first publication and on re-activation (new for subscribers).
+	SubjectPublished = "listings.published" // payload: ListingDoc
+	// PriceDropped fires when an active listing gets cheaper.
+	SubjectPriceDropped = "listings.price_dropped" // payload: PriceDropped
+	ConsumerIndexer     = "search-indexer"
+	ConsumerNotify      = "notify"
 )
 
 // ListingDoc is the denormalized listing published on every change.
@@ -48,6 +53,11 @@ type City struct {
 type Point struct {
 	Lat float64 `json:"lat"`
 	Lng float64 `json:"lng"`
+}
+
+type PriceDropped struct {
+	Listing  ListingDoc `json:"listing"`
+	OldPrice int64      `json:"old_price"`
 }
 
 type ListingRemoved struct {

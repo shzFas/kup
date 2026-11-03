@@ -72,6 +72,8 @@ export interface RefItem {
 
 export type AttrValue = string | number | boolean | string[];
 
+export type ListingStatus = "active" | "archived" | "sold" | "expired" | "blocked";
+
 export interface ListingCard {
   id: string;
   category: string;
@@ -84,7 +86,7 @@ export interface ListingCard {
   attributes: Record<string, AttrValue>;
   attribute_labels: Record<string, string>;
   highlights: string[];
-  status: "active" | "archived" | "sold";
+  status: ListingStatus;
   published_at: string;
   is_favorite?: boolean;
 }
@@ -98,6 +100,9 @@ export interface Listing extends ListingCard {
   views: number;
   is_owner: boolean;
   updated_at: string;
+  expires_at: string | null;
+  price_history: { price: number; at: string }[];
+  moderation_reason: string | null;
 }
 
 export interface ListingInput {
@@ -115,6 +120,7 @@ export interface User {
   id: string;
   phone: string;
   name: string;
+  role: "user" | "moderator" | "admin";
   created_at: string;
 }
 
@@ -156,4 +162,80 @@ export interface ApiErrorBody {
   error: string;
   message: string;
   fields?: Record<string, string>;
+}
+
+// ---------- stage 2 ----------
+
+export interface SavedSearch {
+  id: string;
+  name: string;
+  request: Pick<SearchRequest, "category" | "query" | "filters">;
+  notify: boolean;
+  new_count: number;
+  created_at: string;
+}
+
+export interface SavedSearchInput {
+  name?: string;
+  request: Pick<SearchRequest, "category" | "query" | "filters">;
+  notify: boolean;
+}
+
+export interface Notification {
+  id: string;
+  type: "saved_search" | "price_drop";
+  title: string;
+  body: string;
+  image: string | null;
+  listing_id: string;
+  saved_search_id?: string | null;
+  created_at: string;
+  read: boolean;
+}
+
+export interface Chat {
+  id: string;
+  listing: { id: string; title: string; photo: string | null; price: number; currency: string };
+  peer: { id: string; name: string };
+  role: "buyer" | "seller";
+  last_message: { text: string; at: string; mine: boolean } | null;
+  unread: number;
+  peer_read_at: string | null;
+}
+
+export interface Message {
+  id: string;
+  chat_id: string;
+  sender_id: string;
+  mine: boolean;
+  text: string;
+  created_at: string;
+}
+
+export type ServerEvent =
+  | { type: "message"; chat_id: string; message: Message }
+  | { type: "read"; chat_id: string; reader_id: string; at: string }
+  | { type: "notification"; notification: Notification };
+
+export type ReportReason = "fraud" | "wrong_price" | "sold" | "duplicate" | "wrong_category" | "offensive" | "other";
+
+export const REPORT_REASONS: { value: ReportReason; label: string }[] = [
+  { value: "fraud", label: "Мошенничество" },
+  { value: "wrong_price", label: "Неверная цена" },
+  { value: "sold", label: "Уже продано" },
+  { value: "duplicate", label: "Дубликат" },
+  { value: "wrong_category", label: "Неверная категория" },
+  { value: "offensive", label: "Оскорбительное содержание" },
+  { value: "other", label: "Другое" },
+];
+
+export interface Report {
+  id: string;
+  listing: ListingCard;
+  reason: ReportReason;
+  comment: string;
+  reporter_id: string;
+  status: "open" | "resolved";
+  created_at: string;
+  reports_for_listing: number;
 }

@@ -72,6 +72,7 @@ func main() {
 		s3: s3, bucket: bucket, js: js, currency: config.String("CURRENCY", "KZT"), wake: make(chan struct{}, 1),
 	}
 	go s.relayOutbox(ctx)
+	go s.expireLoop(ctx)
 
 	r := httpx.NewRouter()
 	r.Method("POST", "/v1/listings", httpx.Handler(s.create))
@@ -87,6 +88,14 @@ func main() {
 	r.Method("POST", "/v1/media/photos", httpx.Handler(s.uploadPhoto))
 	r.Method("GET", "/internal/export", httpx.Handler(s.export))
 	r.Method("POST", "/internal/favorites/check", httpx.Handler(s.checkFavorites))
+	r.Method("GET", "/internal/favorites/users", httpx.Handler(s.favoriteUsers))
+	r.Method("GET", "/internal/listings/{id}/brief", httpx.Handler(s.brief))
+	r.Method("POST", "/v1/reports", httpx.Handler(s.createReport))
+	r.Method("GET", "/v1/admin/reports", httpx.Handler(s.adminReports))
+	r.Method("POST", "/v1/admin/reports/{id}/resolve", httpx.Handler(s.resolveReport))
+	r.Method("GET", "/v1/admin/listings", httpx.Handler(s.adminListings))
+	r.Method("POST", "/v1/admin/listings/{id}/block", httpx.Handler(s.blockListing))
+	r.Method("POST", "/v1/admin/listings/{id}/unblock", httpx.Handler(s.unblockListing))
 
 	httpx.Serve(config.String("ADDR", ":8083"), r)
 }
@@ -144,15 +153,19 @@ type row struct {
 	Views       int64
 	PublishedAt time.Time
 	UpdatedAt   time.Time
+	ExpiresAt   time.Time
+	ModReason   *string
 }
 
+const listingTTL = 30 * 24 * time.Hour
+
 const cols = `id, user_id, category, status, title, description, price, currency, price_suffix, city, lat, lng,
-	attributes, attribute_labels, highlights, search_text, photos::text[], views, published_at, updated_at`
+	attributes, attribute_labels, highlights, search_text, photos::text[], views, published_at, updated_at, expires_at, moderation_reason`
 
 func scanRow(sc interface{ Scan(...any) error }) (*row, error) {
 	var r row
 	err := sc.Scan(&r.ID, &r.UserID, &r.Category, &r.Status, &r.Title, &r.Description, &r.Price, &r.Currency, &r.PriceSuffix,
-		&r.City, &r.Lat, &r.Lng, &r.Attributes, &r.Labels, &r.Highlights, &r.SearchText, &r.Photos, &r.Views, &r.PublishedAt, &r.UpdatedAt)
+		&r.City, &r.Lat, &r.Lng, &r.Attributes, &r.Labels, &r.Highlights, &r.SearchText, &r.Photos, &r.Views, &r.PublishedAt, &r.UpdatedAt, &r.ExpiresAt, &r.ModReason)
 	return &r, err
 }
 
@@ -238,6 +251,8 @@ func (s *server) apply(ctx context.Context, r *row, in input, uid string) error 
 	}
 	if n := len([]rune(r.Description)); n > 5000 {
 		errs["description"] = "Не более 5000 символов"
+	} else if hasLink(r.Description) {
+		errs["description"] = "Ссылки в описании запрещены"
 	}
 	if in.Location != nil {
 		if in.Location.Lat < -90 || in.Location.Lat > 90 || in.Location.Lng < -180 || in.Location.Lng > 180 {
@@ -313,20 +328,26 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) error {
 		in.Attributes = &map[string]any{}
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
-	l := &row{ID: uuid.NewString(), UserID: uid, Status: "active", Attributes: map[string]any{}, PublishedAt: now, UpdatedAt: now}
+	l := &row{ID: uuid.NewString(), UserID: uid, Status: "active", Attributes: map[string]any{}, PublishedAt: now, UpdatedAt: now, ExpiresAt: now.Add(listingTTL)}
 	if err := s.apply(r.Context(), l, in, uid); err != nil {
 		return err
 	}
 	err = s.inTx(r.Context(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(r.Context(), `INSERT INTO listings(id, user_id, category, status, title, description, price, currency, price_suffix,
-			city, lat, lng, attributes, attribute_labels, highlights, search_text, photos, published_at, created_at, updated_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::uuid[],$18,$18,$18)`,
+			city, lat, lng, attributes, attribute_labels, highlights, search_text, photos, published_at, created_at, updated_at, expires_at)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::uuid[],$18,$18,$18,$19)`,
 			l.ID, l.UserID, l.Category, l.Status, l.Title, l.Description, l.Price, l.Currency, l.PriceSuffix,
-			l.City, l.Lat, l.Lng, l.Attributes, l.Labels, l.Highlights, l.SearchText, l.Photos, l.PublishedAt)
+			l.City, l.Lat, l.Lng, l.Attributes, l.Labels, l.Highlights, l.SearchText, l.Photos, l.PublishedAt, l.ExpiresAt)
 		if err != nil {
 			return err
 		}
-		return s.enqueue(r.Context(), tx, l)
+		if _, err := tx.Exec(r.Context(), `INSERT INTO listing_prices(listing_id, price, at) VALUES ($1,$2,$3)`, l.ID, l.Price, now); err != nil {
+			return err
+		}
+		if err := s.enqueue(r.Context(), tx, l); err != nil {
+			return err
+		}
+		return s.publishEvent(r.Context(), tx, events.SubjectPublished, s.doc(r.Context(), l))
 	})
 	if err != nil {
 		return err
@@ -351,8 +372,19 @@ func (s *server) update(w http.ResponseWriter, r *http.Request) error {
 		if l.UserID != uid {
 			return httpx.Forbidden()
 		}
+		oldPrice := l.Price
 		if err := s.apply(r.Context(), l, in, uid); err != nil {
 			return err
+		}
+		if l.Price != oldPrice {
+			if _, err := tx.Exec(r.Context(), `INSERT INTO listing_prices(listing_id, price) VALUES ($1,$2)`, l.ID, l.Price); err != nil {
+				return err
+			}
+			if l.Price < oldPrice && l.Status == "active" {
+				if err := s.publishEvent(r.Context(), tx, events.SubjectPriceDropped, events.PriceDropped{Listing: s.doc(r.Context(), l), OldPrice: oldPrice}); err != nil {
+					return err
+				}
+			}
 		}
 		_, err = tx.Exec(r.Context(), `UPDATE listings SET title=$2, description=$3, price=$4, currency=$5, price_suffix=$6, city=$7,
 			lat=$8, lng=$9, attributes=$10, attribute_labels=$11, highlights=$12, search_text=$13, photos=$14::uuid[], updated_at=now() WHERE id=$1`,
@@ -402,16 +434,26 @@ func (s *server) changeStatus(w http.ResponseWriter, r *http.Request, uid, statu
 		if l.UserID != uid {
 			return httpx.Forbidden()
 		}
-		// Re-activating bumps the listing to the top, like a fresh publication.
+		if l.Status == "blocked" && status != "deleted" {
+			return httpx.NewError(403, "blocked", "Объявление заблокировано модератором")
+		}
+		// Re-activating (prolonging) bumps the listing to the top, like a fresh publication.
 		bump := status == "active" && l.Status != "active"
 		if bump {
 			l.PublishedAt = time.Now().UTC().Truncate(time.Microsecond)
+			l.ExpiresAt = l.PublishedAt.Add(listingTTL)
 		}
-		_, err = tx.Exec(r.Context(), `UPDATE listings SET status=$2, updated_at=now(), published_at=$3 WHERE id=$1`, l.ID, status, l.PublishedAt)
+		_, err = tx.Exec(r.Context(), `UPDATE listings SET status=$2, updated_at=now(), published_at=$3, expires_at=$4 WHERE id=$1`,
+			l.ID, status, l.PublishedAt, l.ExpiresAt)
 		if err != nil {
 			return err
 		}
 		l.Status = status
+		if bump {
+			if err := s.publishEvent(r.Context(), tx, events.SubjectPublished, s.doc(r.Context(), l)); err != nil {
+				return err
+			}
+		}
 		return s.enqueue(r.Context(), tx, l)
 	})
 	if err != nil {
@@ -429,6 +471,9 @@ func (s *server) get(w http.ResponseWriter, r *http.Request) error {
 	l, err := s.byID(r.Context(), id, nil)
 	if err != nil {
 		return err
+	}
+	if l.Status == "blocked" && l.UserID != httpx.UserID(r) && !isModerator(r) {
+		return httpx.NotFound()
 	}
 	if l.UserID != httpx.UserID(r) {
 		_, _ = s.db.Exec(r.Context(), `UPDATE listings SET views=views+1 WHERE id=$1`, id)
@@ -467,6 +512,9 @@ type detail struct {
 	Description string        `json:"description"`
 	Location    *events.Point `json:"location"`
 	PhotoIDs    []string      `json:"photo_ids"` // same order as photos; send back in PATCH
+	ExpiresAt   *time.Time    `json:"expires_at"`
+	History     []pricePoint  `json:"price_history"`
+	ModReason   *string       `json:"moderation_reason"`
 	Seller      seller        `json:"seller"`
 	Views       int64         `json:"views"`
 	IsOwner     bool          `json:"is_owner"`
@@ -527,6 +575,13 @@ func (s *server) writeDetail(w http.ResponseWriter, r *http.Request, l *row, sta
 	if l.Lat != nil && l.Lng != nil {
 		d.Location = &events.Point{Lat: *l.Lat, Lng: *l.Lng}
 	}
+	if l.Status == "active" {
+		d.ExpiresAt = &l.ExpiresAt
+	}
+	if owner || isModerator(r) {
+		d.ModReason = l.ModReason
+	}
+	d.History = s.priceHistory(r.Context(), l.ID)
 	if u, err := s.user(r.Context(), l.UserID); err == nil {
 		d.Seller = seller{ID: u.ID, Name: u.Name, MemberSince: u.CreatedAt}
 		if d.Seller.Name == "" {
@@ -805,6 +860,11 @@ func (s *server) enqueue(ctx context.Context, tx pgx.Tx, l *row) error {
 	} else {
 		subject, payload = events.SubjectRemoved, events.ListingRemoved{ID: l.ID}
 	}
+	return s.publishEvent(ctx, tx, subject, payload)
+}
+
+// publishEvent writes an event to the outbox inside the caller's transaction.
+func (s *server) publishEvent(ctx context.Context, tx pgx.Tx, subject string, payload any) error {
 	_, err := tx.Exec(ctx, `INSERT INTO outbox(subject, payload) VALUES ($1,$2)`, subject, payload)
 	return err
 }

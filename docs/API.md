@@ -258,3 +258,126 @@
 
 Служебные параметры: `q` (query), `sort`, `page`.
 Пример: `/s/cars?make=toyota&year=2015..2020&transmission=automatic&sort=price_asc`.
+
+---
+
+# Этап 2: уведомления, чат, модерация, доработки объявлений
+
+## Изменения в существующих объектах
+
+- `User` получает поле `role`: `"user" | "moderator" | "admin"`. Роль попадает в JWT; gateway передаёт её сервисам.
+  Админы назначаются через переменную окружения `ADMIN_PHONES` сервиса auth (через запятую).
+- `ListingCard.status`: `active | archived | sold | expired | blocked`.
+  `expired` — истёк срок размещения (30 дней), `blocked` — заблокировано модератором.
+- `Listing` дополнительно:
+```jsonc
+{
+  "expires_at": "2026-11-29T10:00:00Z",         // для active; продление — POST /status {"status":"active"}
+  "price_history": [ { "price": 13000000, "at": "2026-10-01T10:00:00Z" }, { "price": 12500000, "at": "..." } ], // от старых к новым
+  "moderation_reason": null                      // текст причины для blocked (виден только владельцу и модераторам)
+}
+```
+- `POST /v1/listings/{id}/status`: `{"status":"active"}` для `archived`/`sold`/`expired` = продление (дата публикации и срок обновляются). Для `blocked` → `403`.
+- Описание не может содержать ссылки (`http`, `www.`, `t.me/`…) → `400`, `fields.description`.
+
+## Похожие объявления
+`GET /v1/search/similar/{listing_id}?limit=8` → `{ "items": [ListingCard] }`
+
+## Сохранённые поиски (auth)
+
+```jsonc
+// SavedSearch
+{
+  "id": "uuid",
+  "name": "Toyota Camry от 2018",
+  "request": { "category": "cars", "query": "", "filters": { "make": { "in": ["toyota"] } } }, // как в POST /v1/search (без sort/page)
+  "notify": true,            // присылать уведомления о новых объявлениях
+  "new_count": 3,            // непросмотренные новые объявления
+  "created_at": "..."
+}
+```
+- `GET /v1/me/saved-searches` → `{ "items": [SavedSearch] }` (до 50 на пользователя)
+- `POST /v1/me/saved-searches` `{ "name": "...", "request": {...}, "notify": true }` → `201 SavedSearch`.
+  `name` можно не передавать — сервер подставит название категории. Неизвестные фильтры → `400`.
+- `PATCH /v1/me/saved-searches/{id}` `{ "name"?: "...", "notify"?: false }` → `SavedSearch`
+- `DELETE /v1/me/saved-searches/{id}` → `204`
+- `POST /v1/me/saved-searches/{id}/seen` → `204` — обнуляет `new_count` (вызывать при открытии поиска)
+
+Клиент открывает сохранённый поиск как обычную выдачу (`/s/{category}?<filtersToQuery(request.filters)>&q=...`).
+
+## Уведомления (auth)
+
+```jsonc
+// Notification
+{
+  "id": "uuid",
+  "type": "saved_search" | "price_drop",
+  "title": "Новое по поиску «Toyota Camry от 2018»",
+  "body": "Toyota Camry, 2019 — 12 500 000 ₸",
+  "image": "/media/photos/..._t.jpg",      // или null
+  "listing_id": "uuid",
+  "saved_search_id": "uuid",                 // только для saved_search
+  "created_at": "...",
+  "read": false
+}
+```
+- `GET /v1/me/notifications?limit=50&before=<id>` → `{ "items": [Notification], "unread_count": 4 }` (новые сверху)
+- `POST /v1/me/notifications/read` `{ "ids": ["..."] }` → `204`; без `ids` — прочитать все
+- `GET /v1/me/notifications/unread-count` → `{ "count": 4 }`
+
+`price_drop` приходит, когда снизилась цена объявления из избранного.
+
+## Чат (auth)
+
+```jsonc
+// Chat
+{
+  "id": "uuid",
+  "listing": { "id": "uuid", "title": "Toyota Camry, 2018", "photo": "/media/..._t.jpg", "price": 12500000, "currency": "KZT" },
+  "peer": { "id": "uuid", "name": "Иван" },
+  "role": "buyer" | "seller",                 // моя роль в диалоге
+  "last_message": { "text": "Ещё актуально?", "at": "...", "mine": true },
+  "unread": 2,
+  "peer_read_at": "..."                       // до какого момента собеседник прочитал (галочки)
+}
+// Message
+{ "id": "uuid", "chat_id": "uuid", "sender_id": "uuid", "mine": true, "text": "...", "created_at": "..." }
+```
+- `GET /v1/chats` → `{ "items": [Chat], "unread_total": 3 }` (по `last_message.at`, новые сверху)
+- `POST /v1/chats` `{ "listing_id": "uuid", "text": "Здравствуйте! Ещё актуально?" }` → `201 Chat`.
+  Если диалог по этому объявлению уже есть — сообщение добавляется в него (`200`). Своё объявление → `400`, неактивное → `410`.
+- `GET /v1/chats/{id}` → `Chat`
+- `GET /v1/chats/{id}/messages?before=<message_id>&limit=50` → `{ "items": [Message] }` (от старых к новым; `before` — для подгрузки истории)
+- `POST /v1/chats/{id}/messages` `{ "text": "..." }` → `201 Message` (1–2000 символов)
+- `POST /v1/chats/{id}/read` → `204`
+- `GET /v1/chats/unread-count` → `{ "count": 3 }`
+
+Лимиты: не больше 20 новых диалогов в час и 60 сообщений в минуту на пользователя (`429`).
+
+### WebSocket событий
+`GET /v1/ws?access_token=<jwt>` (upgrade). Токен в query, потому что браузерный WebSocket не умеет заголовки.
+Невалидный токен → соединение закрывается с кодом `4401` (клиент обновляет токен и переподключается).
+Сервер шлёт JSON-события, клиент ничего не шлёт (сообщения отправляются через REST):
+```jsonc
+{ "type": "message", "chat_id": "uuid", "message": Message }           // новое сообщение (и своё — для синхронизации вкладок)
+{ "type": "read", "chat_id": "uuid", "reader_id": "uuid", "at": "..." } // собеседник прочитал
+{ "type": "notification", "notification": Notification }
+```
+Сервер шлёт ping раз в 30 с. Клиент переподключается с экспоненциальной задержкой (1 → 30 с).
+
+## Жалобы и модерация
+
+- `POST /v1/reports` (auth) `{ "listing_id": "uuid", "reason": "fraud" | "wrong_price" | "sold" | "duplicate" | "wrong_category" | "offensive" | "other", "comment": "..." }` → `204`.
+  Повторная жалоба того же пользователя на то же объявление игнорируется.
+
+Модератор (`role` = `moderator` или `admin`), иначе `403`:
+- `GET /v1/admin/reports?status=open|resolved&page=1` → `{ "items": [Report], "total": 12 }`
+  ```jsonc
+  { "id": "uuid", "listing": ListingCard, "reason": "fraud", "comment": "...", "reporter_id": "uuid", "status": "open",
+    "created_at": "...", "reports_for_listing": 3 }
+  ```
+- `POST /v1/admin/reports/{id}/resolve` `{ "action": "dismiss" | "block", "reason": "Мошенничество" }` → `204`.
+  `block` блокирует объявление и закрывает все открытые жалобы на него.
+- `GET /v1/admin/listings?status=active|blocked|...&q=текст&user_id=uuid&page=1` → `{ "items": [ListingCard], "total": 100 }`
+- `POST /v1/admin/listings/{id}/block` `{ "reason": "..." }` → `204`
+- `POST /v1/admin/listings/{id}/unblock` → `204` (возвращает в `active`)

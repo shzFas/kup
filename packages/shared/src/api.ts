@@ -2,6 +2,14 @@ import type {
   ApiErrorBody,
   AuthResponse,
   Category,
+  Chat,
+  Message,
+  Notification,
+  Report,
+  ReportReason,
+  SavedSearch,
+  SavedSearchInput,
+  ServerEvent,
   CategorySchema,
   Listing,
   ListingCard,
@@ -135,6 +143,111 @@ export function createApi(opts: ApiOptions) {
     favorites: () => request<{ items: ListingCard[] }>("GET", "/v1/me/favorites").then((r) => r.items),
     addFavorite: (id: string) => request<void>("PUT", `/v1/me/favorites/${id}`),
     removeFavorite: (id: string) => request<void>("DELETE", `/v1/me/favorites/${id}`),
+
+    similar: (id: string, limit = 8) =>
+      request<{ items: ListingCard[] }>("GET", `/v1/search/similar/${id}?limit=${limit}`).then((r) => r.items),
+    /** Prolong an expired/archived/sold listing (same as setListingStatus(id, "active")). */
+    prolong: (id: string) => request<Listing>("POST", `/v1/listings/${id}/status`, { status: "active" }),
+
+    savedSearches: () => request<{ items: SavedSearch[] }>("GET", "/v1/me/saved-searches").then((r) => r.items),
+    createSavedSearch: (input: SavedSearchInput) => request<SavedSearch>("POST", "/v1/me/saved-searches", input),
+    updateSavedSearch: (id: string, patch: { name?: string; notify?: boolean }) =>
+      request<SavedSearch>("PATCH", `/v1/me/saved-searches/${id}`, patch),
+    deleteSavedSearch: (id: string) => request<void>("DELETE", `/v1/me/saved-searches/${id}`),
+    markSavedSearchSeen: (id: string) => request<void>("POST", `/v1/me/saved-searches/${id}/seen`),
+
+    notifications: (params: { limit?: number; before?: string } = {}) => {
+      const qs = new URLSearchParams();
+      if (params.limit) qs.set("limit", String(params.limit));
+      if (params.before) qs.set("before", params.before);
+      const s = qs.toString();
+      return request<{ items: Notification[]; unread_count: number }>("GET", `/v1/me/notifications${s ? "?" + s : ""}`);
+    },
+    readNotifications: (ids?: string[]) => request<void>("POST", "/v1/me/notifications/read", ids ? { ids } : {}),
+    unreadNotifications: () =>
+      request<{ count: number }>("GET", "/v1/me/notifications/unread-count").then((r) => r.count),
+
+    chats: () => request<{ items: Chat[]; unread_total: number }>("GET", "/v1/chats"),
+    chat: (id: string) => request<Chat>("GET", `/v1/chats/${id}`),
+    chatMessages: (id: string, params: { before?: string; limit?: number } = {}) => {
+      const qs = new URLSearchParams();
+      if (params.before) qs.set("before", params.before);
+      if (params.limit) qs.set("limit", String(params.limit));
+      const s = qs.toString();
+      return request<{ items: Message[] }>("GET", `/v1/chats/${id}/messages${s ? "?" + s : ""}`).then((r) => r.items);
+    },
+    /** Starts a chat about a listing (or appends to the existing one). */
+    startChat: (listingId: string, text: string) => request<Chat>("POST", "/v1/chats", { listing_id: listingId, text }),
+    sendMessage: (chatId: string, text: string) => request<Message>("POST", `/v1/chats/${chatId}/messages`, { text }),
+    readChat: (chatId: string) => request<void>("POST", `/v1/chats/${chatId}/read`),
+    chatUnread: () => request<{ count: number }>("GET", "/v1/chats/unread-count").then((r) => r.count),
+
+    report: (listingId: string, reason: ReportReason, comment = "") =>
+      request<void>("POST", "/v1/reports", { listing_id: listingId, reason, comment }),
+
+    admin: {
+      reports: (status: "open" | "resolved" = "open", page = 1) =>
+        request<{ items: Report[]; total: number }>("GET", `/v1/admin/reports?status=${status}&page=${page}`),
+      resolveReport: (id: string, action: "dismiss" | "block", reason = "") =>
+        request<void>("POST", `/v1/admin/reports/${id}/resolve`, { action, reason }),
+      listings: (params: { status?: string; q?: string; user_id?: string; page?: number } = {}) => {
+        const qs = new URLSearchParams();
+        for (const [k, v] of Object.entries(params)) if (v != null && v !== "") qs.set(k, String(v));
+        return request<{ items: ListingCard[]; total: number }>("GET", `/v1/admin/listings?${qs}`);
+      },
+      blockListing: (id: string, reason: string) => request<void>("POST", `/v1/admin/listings/${id}/block`, { reason }),
+      unblockListing: (id: string) => request<void>("POST", `/v1/admin/listings/${id}/unblock`),
+    },
+
+    /**
+     * Opens the realtime events socket (chat messages, read receipts, notifications).
+     * Reconnects with backoff and refreshes the token on close code 4401. Returns a function that closes it.
+     */
+    connectEvents: (onEvent: (e: ServerEvent) => void, onStatus?: (connected: boolean) => void) => {
+      let ws: WebSocket | null = null;
+      let stopped = false;
+      let delay = 1000;
+      let timer: ReturnType<typeof setTimeout> | null = null;
+      const wsBase = base.replace(/^http/, "ws");
+
+      const schedule = () => {
+        if (stopped) return;
+        timer = setTimeout(open, delay);
+        delay = Math.min(delay * 2, 30000);
+      };
+      async function open() {
+        const t = await opts.tokens.get();
+        if (!t || stopped) return;
+        ws = new WebSocket(`${wsBase}/v1/ws?access_token=${encodeURIComponent(t.access)}`);
+        ws.onopen = () => {
+          delay = 1000;
+          onStatus?.(true);
+        };
+        ws.onmessage = (m) => {
+          try {
+            onEvent(JSON.parse(String(m.data)) as ServerEvent);
+          } catch {
+            /* ignore malformed frames */
+          }
+        };
+        ws.onclose = async (ev) => {
+          onStatus?.(false);
+          ws = null;
+          if (stopped) return;
+          if (ev.code === 4401) {
+            refreshing ??= refresh().finally(() => (refreshing = null));
+            if (!(await refreshing)) return; // logged out
+          }
+          schedule();
+        };
+      }
+      void open();
+      return () => {
+        stopped = true;
+        if (timer) clearTimeout(timer);
+        ws?.close();
+      };
+    },
   };
 }
 

@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { formatPrice, type CategorySchema, type Listing } from "@kup/shared";
+import { formatPrice, type CategorySchema, type Listing, type ListingCard } from "@kup/shared";
 import { memberSince, relativeDate } from "@/lib/format";
 import { Gallery } from "./Gallery";
 import { PhoneButton } from "./PhoneButton";
 import { OwnerActions } from "./OwnerActions";
+import { PriceHistory } from "./PriceHistory";
+import { SimilarListings } from "./SimilarListings";
+import { ContactSellerButton, ReportButton } from "./ContactActions";
 import { FavoriteButton } from "../FavoriteButton";
 import { IconEye, IconPin } from "../icons";
 
@@ -23,18 +26,23 @@ export function characteristics(listing: Listing, schema: CategorySchema | null)
   return [...groups, other].filter((g) => g.rows.length > 0);
 }
 
-const STATUS_NOTE: Record<string, string> = {
+const STATUS_NOTE: Record<Listing["status"], string | null> = {
+  active: null,
   archived: "Объявление снято с публикации",
   sold: "Продано",
+  expired: "Срок размещения объявления истёк",
+  blocked: "Объявление заблокировано модератором",
 };
 
 export function ListingView({
   listing,
   schema,
   onOwnerChanged,
+  similar,
 }: {
   listing: Listing;
   schema: CategorySchema | null;
+  similar?: ListingCard[] | null;
   onOwnerChanged?: (s: Listing["status"] | "deleted") => void;
 }) {
   const groups = characteristics(listing, schema);
@@ -92,6 +100,12 @@ export function ListingView({
             </section>
           )}
 
+          {listing.price_history?.length >= 2 && (
+            <div className="mt-6">
+              <PriceHistory history={listing.price_history} currency={listing.currency} suffix={listing.price_suffix} />
+            </div>
+          )}
+
           <section className="mt-6 card p-5">
             <h2 className="text-lg font-semibold">Описание</h2>
             {listing.description ? (
@@ -117,6 +131,7 @@ export function ListingView({
             </div>
             <div className="mt-4 space-y-2">
               <PhoneButton id={listing.id} />
+              <ContactSellerButton listingId={listing.id} sellerId={listing.seller?.id} isOwner={listing.is_owner} status={listing.status} />
               <FavoriteButton id={listing.id} withLabel className="btn-secondary w-full" />
             </div>
           </div>
@@ -131,9 +146,22 @@ export function ListingView({
             </div>
           </div>
 
-          <OwnerActions id={listing.id} sellerId={listing.seller?.id} isOwner={listing.is_owner} status={listing.status} onChanged={onOwnerChanged} />
+          <OwnerActions
+            id={listing.id}
+            sellerId={listing.seller?.id}
+            isOwner={listing.is_owner}
+            status={listing.status}
+            expiresAt={listing.expires_at}
+            moderationReason={listing.moderation_reason}
+            onChanged={onOwnerChanged}
+          />
+          <div className="px-1">
+            <ReportButton listingId={listing.id} sellerId={listing.seller?.id} isOwner={listing.is_owner} />
+          </div>
         </aside>
       </div>
+
+      <SimilarListings key={listing.id} id={listing.id} initial={similar} />
     </div>
   );
 }

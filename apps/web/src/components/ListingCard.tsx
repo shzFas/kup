@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { formatPrice, type ListingCard as Card } from "@kup/shared";
 import { relativeDate } from "@/lib/format";
+import { STATUS_LABEL } from "@/lib/status";
 import { Photo } from "./Photo";
 import { FavoriteButton } from "./FavoriteButton";
 
-const STATUS: Record<string, string> = { archived: "Снято с публикации", sold: "Продано" };
 
 export function ListingCardView({ item, layout = "grid", eager = false, footer }: { item: Card; layout?: "grid" | "list"; eager?: boolean; footer?: React.ReactNode }) {
-  const status = STATUS[item.status];
+  const status = item.status === "active" ? null : STATUS_LABEL[item.status];
   if (layout === "list") {
     return (
       <article className="card overflow-hidden relative group">
@@ -23,7 +23,7 @@ export function ListingCardView({ item, layout = "grid", eager = false, footer }
             <div className="mt-auto pt-2 text-xs text-gray-500 flex flex-wrap gap-x-2">
               <span>{item.city?.name}</span>
               <span suppressHydrationWarning>{relativeDate(item.published_at)}</span>
-              {status && <span className="text-amber-700">{status}</span>}
+              {status && <span className={item.status === "blocked" ? "text-red-600" : "text-amber-700"}>{status}</span>}
             </div>
           </div>
         </Link>

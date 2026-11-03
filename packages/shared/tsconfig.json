@@ -9,5 +9,6 @@
     "allowImportingTsExtensions": true,
     "lib": ["ES2020", "DOM"]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }
