@@ -5,11 +5,13 @@ import type {
   Chat,
   Message,
   Notification,
+  Lang,
   Report,
   ReportReason,
   SavedSearch,
   SavedSearchInput,
   ServerEvent,
+  Suggestion,
   CategorySchema,
   Listing,
   ListingCard,
@@ -41,6 +43,8 @@ export interface ApiOptions {
   baseUrl: string; // e.g. http://localhost:8180
   tokens: TokenStore;
   onLogout?: () => void;
+  /** Current UI language, sent as Accept-Language so the API answers in it. */
+  lang?: () => Lang;
 }
 
 /** Typed client for the gateway. Works in browsers, Node (SSR) and React Native. */
@@ -70,6 +74,7 @@ export function createApi(opts: ApiOptions) {
     const t = await opts.tokens.get();
     const headers: Record<string, string> = {};
     if (t) headers.Authorization = `Bearer ${t.access}`;
+    if (opts.lang) headers["Accept-Language"] = opts.lang();
     let payload: BodyInit | undefined;
     if (body instanceof FormData) payload = body;
     else if (body !== undefined) {
@@ -108,7 +113,9 @@ export function createApi(opts: ApiOptions) {
       await opts.tokens.set(null);
     },
     me: () => request<User>("GET", "/v1/me"),
-    updateMe: (patch: { name: string }) => request<User>("PATCH", "/v1/me", patch),
+    updateMe: (patch: { name?: string; lang?: Lang }) => request<User>("PATCH", "/v1/me", patch),
+    suggest: (q: string, limit = 8) =>
+      request<{ items: Suggestion[] }>("GET", `/v1/suggest?q=${encodeURIComponent(q)}&limit=${limit}`).then((r) => r.items),
 
     categories: () => request<{ items: Category[] }>("GET", "/v1/categories").then((r) => r.items),
     schema: (slug: string) => request<CategorySchema>("GET", `/v1/categories/${slug}/schema`),

@@ -1,4 +1,11 @@
-import type { Attribute, AttrValue, FilterDef, Filters, FilterValue } from "./types.ts";
+import type { Attribute, AttrValue, FilterDef, Filters, FilterValue, Lang } from "./types.ts";
+
+const RANGE_WORDS: Record<Lang, { from: string; to: string }> = {
+  ru: { from: "от", to: "до" },
+  uk: { from: "від", to: "до" },
+  cs: { from: "od", to: "do" },
+  en: { from: "from", to: "to" },
+};
 
 /** Query params used for things other than filters. */
 export const RESERVED_PARAMS = ["q", "sort", "page"] as const;
@@ -126,7 +133,9 @@ export function filterChipLabel(
   def: FilterDef,
   f: FilterValue,
   refNames: Record<string, string> = {},
+  lang: Lang = "ru",
 ): string {
+  const words = RANGE_WORDS[lang];
   const unit = def.unit ? ` ${def.unit}` : "";
   if ("in" in f || "all" in f) {
     const list = "in" in f ? f.in : f.all;
@@ -140,8 +149,8 @@ export function filterChipLabel(
   const a = f.gte != null ? formatNumber(f.gte) : null;
   const b = f.lte != null ? formatNumber(f.lte) : null;
   if (a && b) return `${def.label}: ${a}–${b}${unit}`;
-  if (a) return `${def.label}: от ${a}${unit}`;
-  return `${def.label}: до ${b}${unit}`;
+  if (a) return `${def.label}: ${words.from} ${a}${unit}`;
+  return `${def.label}: ${words.to} ${b}${unit}`;
 }
 
 /** Attributes to show in the create/edit form for the current values (not computed, deps met). */
@@ -157,7 +166,7 @@ export function formatNumber(n: number): string {
   return frac ? `${grouped},${frac}` : grouped;
 }
 
-const CURRENCY_SIGNS: Record<string, string> = { KZT: "₸", RUB: "₽", USD: "$", EUR: "€" };
+const CURRENCY_SIGNS: Record<string, string> = { CZK: "Kč", EUR: "€", USD: "$", KZT: "₸" };
 
 export function formatPrice(price: number, currency: string, suffix = ""): string {
   const sign = CURRENCY_SIGNS[currency] ?? currency;

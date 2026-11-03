@@ -35,14 +35,17 @@ type suggestion struct {
 
 var stripMarks = transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
 
-// normalize lowercases, removes diacritics (š→s, ř→r) and folds ё→е, ї→і.
+// normalize lowercases, removes diacritics (š→s, ř→r), folds ё→е, ї→і and
+// letters people mix up in Latin spelling (octavia/oktavia, wolkswagen, hyundai/hiundai).
 func normalize(s string) string {
 	out, _, err := transform.String(stripMarks, strings.ToLower(s))
 	if err != nil {
 		out = strings.ToLower(s)
 	}
-	return strings.NewReplacer("ё", "е", "ї", "і", "й", "и").Replace(out)
+	return fold.Replace(out)
 }
+
+var fold = strings.NewReplacer("ё", "е", "ї", "і", "й", "и", "c", "k", "w", "v", "y", "i")
 
 // tokens splits text into normalized words. "2+kk" stays one token.
 func tokens(s string) []string {

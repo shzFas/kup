@@ -1,3 +1,24 @@
+export type Lang = "ru" | "uk" | "cs" | "en";
+
+/** Supported UI languages; the first one is the default. */
+export const LANGS: { code: Lang; name: string }[] = [
+  { code: "ru", name: "Русский" },
+  { code: "uk", name: "Українська" },
+  { code: "cs", name: "Čeština" },
+  { code: "en", name: "English" },
+];
+
+/** Picks a supported language from e.g. navigator.language or Accept-Language. */
+export function pickLang(input: string | null | undefined): Lang {
+  for (const part of (input ?? "").toLowerCase().split(",")) {
+    const code = part.trim().slice(0, 2);
+    if (code === "ru" || code === "uk" || code === "cs" || code === "en") return code;
+    if (code === "be" || code === "kk") return "ru"; // CIS languages without a UI translation
+    if (code === "sk") return "cs";
+  }
+  return "ru";
+}
+
 // Types mirror docs/API.md. Keep them in sync with the Go services.
 
 export type AttrType = "int" | "decimal" | "enum" | "multi_enum" | "bool" | "ref" | "text";
@@ -28,6 +49,8 @@ export interface Attribute {
   unit: string | null;
   depends_on: DependsOn | null;
   computed: boolean;
+  /** Short explanation shown under the form field (Czech terms explained for newcomers). */
+  hint: string | null;
 }
 
 export interface FilterDef {
@@ -47,6 +70,7 @@ export interface FilterDef {
   pinned: boolean;
   facet: boolean;
   depends_on: DependsOn | null;
+  hint: string | null;
 }
 
 export interface CategorySchema {
@@ -89,6 +113,9 @@ export interface ListingCard {
   status: ListingStatus;
   published_at: string;
   is_favorite?: boolean;
+  /** Only in the owner's own lists (GET /v1/me/listings). */
+  expires_at?: string | null;
+  moderation_reason?: string | null;
 }
 
 export interface Listing extends ListingCard {
@@ -121,6 +148,7 @@ export interface User {
   phone: string;
   name: string;
   role: "user" | "moderator" | "admin";
+  lang: Lang;
   created_at: string;
 }
 
@@ -238,4 +266,12 @@ export interface Report {
   status: "open" | "resolved";
   created_at: string;
   reports_for_listing: number;
+}
+
+export interface Suggestion {
+  type: "category" | "make" | "model" | "city" | "layout";
+  label: string;
+  sublabel: string | null;
+  category: string;
+  filters: Filters;
 }

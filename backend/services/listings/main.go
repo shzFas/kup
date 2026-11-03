@@ -515,6 +515,9 @@ type card struct {
 	Status          string            `json:"status"`
 	PublishedAt     time.Time         `json:"published_at"`
 	IsFavorite      *bool             `json:"is_favorite,omitempty"`
+	// owner only: shown in "my listings"
+	ExpiresAt        *time.Time `json:"expires_at,omitempty"`
+	ModerationReason *string    `json:"moderation_reason,omitempty"`
 }
 
 type detail struct {
@@ -576,11 +579,16 @@ func (s *server) toCard(ctx context.Context, l *row, owner bool, lang i18n.Lang)
 	}
 	t := l.texts(lang)
 	attrs, labels := publicAttrs(l, t.Labels, owner)
-	return card{
+	c := card{
 		ID: l.ID, Category: l.Category, Title: t.Title, Price: l.Price, Currency: l.Currency, PriceSuffix: t.PriceSuffix,
 		City: events.City{ID: l.City, Name: refs["city"][l.City].Name(string(lang))}, Photos: photos, Attributes: attrs, AttributeLabels: labels,
 		Highlights: t.Highlights, Status: l.Status, PublishedAt: l.PublishedAt,
 	}
+	if owner {
+		exp := l.ExpiresAt
+		c.ExpiresAt, c.ModerationReason = &exp, l.ModReason
+	}
+	return c
 }
 
 func (s *server) writeDetail(w http.ResponseWriter, r *http.Request, l *row, status int) error {
