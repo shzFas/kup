@@ -1,59 +1,113 @@
 {
-  "slug": "mopeds", "name": "Мопеды и скутеры", "icon": "scooter", "position": 3,
+  "slug": "mopeds",
+  "icon": "scooter",
+  "position": 3,
+  "name": {
+    "ru": "Мопеды и скутеры",
+    "uk": "Мопеди та скутери",
+    "cs": "Mopedy a skútry",
+    "en": "Mopeds & scooters"
+  },
   "groups": [
-    { "key": "main", "label": "Основное" },
-    { "key": "engine", "label": "Двигатель" }
+    {
+      "key": "main",
+      "label": {
+        "ru": "Основное",
+        "uk": "Основне",
+        "cs": "Základní údaje",
+        "en": "Basics"
+      }
+    },
+    {
+      "key": "engine",
+      "label": {
+        "ru": "Двигатель",
+        "uk": "Двигун",
+        "cs": "Motor",
+        "en": "Engine"
+      }
+    },
+    {
+      "key": "history",
+      "label": {
+        "ru": "Документы",
+        "uk": "Документи",
+        "cs": "Doklady",
+        "en": "Documents"
+      }
+    }
   ],
-  "highlights": ["year", "engine_cc", "motor_w", "max_speed_kmh", "license_required"],
+  "highlights": [
+    "year",
+    "engine_cc",
+    "motor_w",
+    "max_speed_kmh",
+    "license_required"
+  ],
   "sorts": [
-    { "value": "date_desc", "label": "Сначала новые" },
-    { "value": "price_asc", "label": "Сначала дешёвые" },
-    { "value": "price_desc", "label": "Сначала дорогие" },
-    { "value": "year_desc", "label": "Год: новее" },
-    { "value": "mileage_asc", "label": "Пробег: меньше" }
+    {
+      "value": "date_desc",
+      "label": {
+        "ru": "Сначала новые",
+        "uk": "Спочатку нові",
+        "cs": "Nejnovější",
+        "en": "Newest first"
+      }
+    },
+    {
+      "value": "price_asc",
+      "label": {
+        "ru": "Сначала дешёвые",
+        "uk": "Спочатку дешевші",
+        "cs": "Od nejlevnějších",
+        "en": "Price: low to high"
+      }
+    },
+    {
+      "value": "price_desc",
+      "label": {
+        "ru": "Сначала дорогие",
+        "uk": "Спочатку дорожчі",
+        "cs": "Od nejdražších",
+        "en": "Price: high to low"
+      }
+    },
+    {
+      "value": "year_desc",
+      "label": {
+        "ru": "Год: новее",
+        "uk": "Рік: новіші",
+        "cs": "Rok výroby: nejnovější",
+        "en": "Year: newest first"
+      }
+    },
+    {
+      "value": "mileage_asc",
+      "label": {
+        "ru": "Пробег: меньше",
+        "uk": "Пробіг: менший",
+        "cs": "Nejnižší nájezd",
+        "en": "Mileage: lowest first"
+      }
+    }
   ],
   "attributes": [
-    { "key": "make", "type": "ref", "ref": "moped_make", "label": "Марка", "group": "main", "required": true,
-      "filter": { "facet": true } },
-    { "key": "model", "type": "ref", "ref": "moped_model", "parent": "make", "label": "Модель", "group": "main", "required": true,
-      "filter": { "facet": true } },
-    { "key": "moped_type", "type": "enum", "label": "Тип", "group": "main", "required": true,
-      "options": [
-        { "value": "moped", "label": "Мопед" }, { "value": "scooter", "label": "Скутер" }, { "value": "maxi_scooter", "label": "Макси-скутер" },
-        { "value": "e_scooter", "label": "Электроскутер" }, { "value": "pitbike", "label": "Питбайк" }
-      ],
-      "filter": { "pinned": true, "facet": true } },
-    { "key": "license_required", "type": "enum", "label": "Права", "group": "main", "required": true,
-      "options": [ { "value": "none", "label": "Без прав" }, { "value": "M", "label": "Категория M" }, { "value": "A1", "label": "Категория A1" } ],
-      "filter": { "pinned": true, "facet": true } },
-    { "key": "year", "type": "int", "label": "Год выпуска", "group": "main", "required": true, "min": 1970, "max": 2027,
-      "filter": { "presets": [2015, 2018, 2020, 2023] } },
-    { "key": "mileage_km", "type": "int", "label": "Пробег", "unit": "км", "group": "main", "required": false, "min": 0, "max": 200000,
-      "filter": { "presets": [1000, 5000, 10000] } },
-    { "key": "condition", "type": "enum", "label": "Состояние", "group": "main", "required": true,
-      "options": [ { "value": "new", "label": "Новый" }, { "value": "used", "label": "Б/у" }, { "value": "parts", "label": "На запчасти" } ],
-      "filter": { "facet": true } },
-
-    { "key": "power_source", "type": "enum", "label": "Тип двигателя", "group": "engine", "required": true,
-      "options": [ { "value": "petrol", "label": "Бензин" }, { "value": "electric", "label": "Электро" } ],
-      "filter": { "pinned": true, "facet": true } },
-    { "key": "engine_cc", "type": "int", "label": "Объём двигателя", "unit": "см³", "group": "engine", "required": true, "min": 25, "max": 800,
-      "depends_on": { "key": "power_source", "values": ["petrol"] },
-      "filter": { "presets": [50, 125, 150, 300] } },
-    { "key": "stroke", "type": "enum", "label": "Тактность", "group": "engine", "required": false,
-      "depends_on": { "key": "power_source", "values": ["petrol"] },
-      "options": [ { "value": "2t", "label": "2-тактный" }, { "value": "4t", "label": "4-тактный" } ],
-      "filter": {} },
-    { "key": "motor_w", "type": "int", "label": "Мощность мотора", "unit": "Вт", "group": "engine", "required": true, "min": 100, "max": 20000,
-      "depends_on": { "key": "power_source", "values": ["electric"] },
-      "filter": { "presets": [1000, 2000, 3000, 4000] } },
-    { "key": "battery_ah", "type": "int", "label": "Ёмкость батареи", "unit": "А·ч", "group": "engine", "required": false, "min": 5, "max": 200,
-      "depends_on": { "key": "power_source", "values": ["electric"] },
-      "filter": {} },
-    { "key": "range_km", "type": "int", "label": "Запас хода", "unit": "км", "group": "engine", "required": false, "min": 5, "max": 400,
-      "depends_on": { "key": "power_source", "values": ["electric"] },
-      "filter": { "presets": [40, 60, 100] } },
-    { "key": "max_speed_kmh", "type": "int", "label": "Максимальная скорость", "unit": "км/ч", "group": "engine", "required": false, "min": 10, "max": 200,
-      "filter": { "presets": [45, 60, 90] } }
+    {"key": "make", "type": "ref", "label": {"ru": "Марка", "uk": "Марка", "cs": "Značka", "en": "Make"}, "group": "main", "required": true, "ref": "moped_make", "filter": {"facet": true}},
+    {"key": "model", "type": "ref", "label": {"ru": "Модель", "uk": "Модель", "cs": "Model", "en": "Model"}, "group": "main", "required": true, "ref": "moped_model", "parent": "make", "filter": {"facet": true}},
+    {"key": "moped_type", "type": "enum", "label": {"ru": "Тип", "uk": "Тип", "cs": "Typ", "en": "Type"}, "group": "main", "required": true, "options": [{"value": "moped", "label": {"ru": "Мопед", "uk": "Мопед", "cs": "Moped", "en": "Moped"}}, {"value": "scooter", "label": {"ru": "Скутер", "uk": "Скутер", "cs": "Skútr", "en": "Scooter"}}, {"value": "maxi_scooter", "label": {"ru": "Макси-скутер", "uk": "Максі-скутер", "cs": "Maxi skútr", "en": "Maxi scooter"}}, {"value": "e_scooter", "label": {"ru": "Электроскутер (с номером)", "uk": "Електроскутер (з номером)", "cs": "Elektroskútr (s SPZ)", "en": "E-scooter (registered)"}}, {"value": "pitbike", "label": {"ru": "Питбайк", "uk": "Пітбайк", "cs": "Pitbike", "en": "Pit bike"}}], "filter": {"pinned": true, "facet": true}},
+    {"key": "license_required", "type": "enum", "label": {"ru": "Нужные права", "uk": "Потрібні права", "cs": "Potřebné oprávnění", "en": "Licence needed"}, "group": "main", "required": true, "options": [{"value": "none", "label": {"ru": "Без прав", "uk": "Без прав", "cs": "Bez řidičáku", "en": "No licence"}}, {"value": "AM", "label": {"ru": "AM (до 50 см³, 45 км/ч)", "uk": "AM (до 50 см³, 45 км/год)", "cs": "AM (do 50 cm³, 45 km/h)", "en": "AM (up to 50 cc, 45 km/h)"}}, {"value": "A1", "label": {"ru": "A1 (до 125 см³, 11 кВт)", "uk": "A1 (до 125 см³, 11 кВт)", "cs": "A1 (do 125 cm³, 11 kW)", "en": "A1 (up to 125 cc, 11 kW)"}}, {"value": "B125", "label": {"ru": "Хватит прав B (до 125 см³, автомат)", "uk": "Достатньо прав B (до 125 см³, автомат)", "cs": "Stačí řidičák B (do 125 cm³, automat)", "en": "Car licence B is enough (≤125 cc, automatic)"}}], "hint": {"ru": "В Чехии с правами B можно ездить на 125 см³ с автоматом (до 11 кВт), но только по ČR. Уточняйте актуальные правила.", "uk": "У Чехії з правами B можна їздити на 125 см³ з автоматом (до 11 кВт), але лише по ČR. Уточнюйте актуальні правила.", "cs": "S řidičákem B lze v ČR jezdit na 125 cm³ s automatem (do 11 kW), jen po Česku. Ověřte si aktuální pravidla.", "en": "In Czechia a car licence (B) covers 125 cc automatics up to 11 kW, within CZ only. Check the current rules."}, "filter": {"pinned": true, "facet": true, "label": {"ru": "Права", "uk": "Права", "cs": "Řidičák", "en": "Licence"}, "hint": {"ru": "AM — мопеды до 45 км/ч (с 15 лет), A1 — до 125 см³ (с 16 лет). B125 — хватит автомобильных прав B.", "uk": "AM — мопеди до 45 км/год (з 15 років), A1 — до 125 см³ (з 16 років). B125 — достатньо автомобільних прав B.", "cs": "AM — mopedy do 45 km/h (od 15 let), A1 — do 125 cm³ (od 16 let). B125 — stačí řidičák na auto.", "en": "AM — mopeds up to 45 km/h (15+), A1 — up to 125 cc (16+). B125 — a car licence (B) is enough."}}},
+    {"key": "year", "type": "int", "label": {"ru": "Год выпуска", "uk": "Рік випуску", "cs": "Rok výroby", "en": "Year"}, "group": "main", "required": true, "min": 1955, "max": 2027, "filter": {"presets": [2015, 2018, 2020, 2023]}},
+    {"key": "mileage_km", "type": "int", "label": {"ru": "Пробег", "uk": "Пробіг", "cs": "Najeto", "en": "Mileage"}, "group": "main", "required": false, "min": 0, "max": 200000, "unit": {"ru": "км", "uk": "км", "cs": "km", "en": "km"}, "filter": {"presets": [1000, 5000, 10000, 20000]}},
+    {"key": "condition", "type": "enum", "label": {"ru": "Состояние", "uk": "Стан", "cs": "Stav", "en": "Condition"}, "group": "main", "required": true, "options": [{"value": "new", "label": {"ru": "Новый", "uk": "Новий", "cs": "Nový", "en": "New"}}, {"value": "used", "label": {"ru": "Б/у", "uk": "Вживаний", "cs": "Ojetý", "en": "Used"}}, {"value": "parts", "label": {"ru": "На запчасти", "uk": "На запчастини", "cs": "Na náhradní díly", "en": "For parts"}}], "filter": {"facet": true}},
+    {"key": "power_source", "type": "enum", "label": {"ru": "Тип двигателя", "uk": "Тип двигуна", "cs": "Pohon", "en": "Power source"}, "group": "engine", "required": true, "options": [{"value": "petrol", "label": {"ru": "Бензин", "uk": "Бензин", "cs": "Benzín", "en": "Petrol"}}, {"value": "electric", "label": {"ru": "Электро", "uk": "Електро", "cs": "Elektro", "en": "Electric"}}], "filter": {"pinned": true, "facet": true}},
+    {"key": "engine_cc", "type": "int", "label": {"ru": "Объём двигателя", "uk": "Об'єм двигуна", "cs": "Objem motoru", "en": "Engine size"}, "group": "engine", "required": true, "min": 25, "max": 800, "unit": {"ru": "см³", "uk": "см³", "cs": "cm³", "en": "cc"}, "depends_on": {"key": "power_source", "values": ["petrol"]}, "filter": {"presets": [50, 125, 150, 300]}},
+    {"key": "stroke", "type": "enum", "label": {"ru": "Тактность", "uk": "Тактність", "cs": "Taktnost", "en": "Stroke"}, "group": "engine", "required": false, "options": [{"value": "2t", "label": {"ru": "2-тактный", "uk": "2-тактний", "cs": "Dvoutakt", "en": "Two-stroke"}}, {"value": "4t", "label": {"ru": "4-тактный", "uk": "4-тактний", "cs": "Čtyřtakt", "en": "Four-stroke"}}], "depends_on": {"key": "power_source", "values": ["petrol"]}, "filter": {}},
+    {"key": "motor_w", "type": "int", "label": {"ru": "Мощность мотора", "uk": "Потужність мотора", "cs": "Výkon motoru", "en": "Motor power"}, "group": "engine", "required": true, "min": 100, "max": 20000, "unit": {"ru": "Вт", "uk": "Вт", "cs": "W", "en": "W"}, "depends_on": {"key": "power_source", "values": ["electric"]}, "hint": {"ru": "Номинальная мощность. До 4000 Вт и 45 км/ч — категория AM.", "uk": "Номінальна потужність. До 4000 Вт і 45 км/год — категорія AM.", "cs": "Jmenovitý výkon. Do 4 000 W a 45 km/h stačí skupina AM.", "en": "Rated power. Up to 4,000 W and 45 km/h counts as AM."}, "filter": {"presets": [1000, 2000, 3000, 4000]}},
+    {"key": "battery_ah", "type": "int", "label": {"ru": "Ёмкость батареи", "uk": "Ємність батареї", "cs": "Kapacita baterie", "en": "Battery capacity"}, "group": "engine", "required": false, "min": 5, "max": 200, "unit": {"ru": "А·ч", "uk": "А·год", "cs": "Ah", "en": "Ah"}, "depends_on": {"key": "power_source", "values": ["electric"]}, "filter": {}},
+    {"key": "battery_removable", "type": "bool", "label": {"ru": "Съёмная батарея", "uk": "Знімна батарея", "cs": "Vyjímatelná baterie", "en": "Removable battery"}, "group": "engine", "required": false, "depends_on": {"key": "power_source", "values": ["electric"]}, "hint": {"ru": "Можно зарядить дома от розетки — удобно, если нет гаража.", "uk": "Можна зарядити вдома від розетки — зручно, якщо немає гаража.", "cs": "Lze nabíjet doma ze zásuvky — praktické, pokud nemáte garáž.", "en": "Can be charged at home from a socket — handy without a garage."}, "filter": {}},
+    {"key": "range_km", "type": "int", "label": {"ru": "Запас хода", "uk": "Запас ходу", "cs": "Dojezd", "en": "Range"}, "group": "engine", "required": false, "min": 5, "max": 400, "unit": {"ru": "км", "uk": "км", "cs": "km", "en": "km"}, "depends_on": {"key": "power_source", "values": ["electric"]}, "filter": {"presets": [40, 60, 100]}},
+    {"key": "max_speed_kmh", "type": "int", "label": {"ru": "Максимальная скорость", "uk": "Максимальна швидкість", "cs": "Maximální rychlost", "en": "Top speed"}, "group": "engine", "required": false, "min": 10, "max": 200, "unit": {"ru": "км/ч", "uk": "км/год", "cs": "km/h", "en": "km/h"}, "filter": {"presets": [25, 45, 60, 90]}},
+    {"key": "registered", "type": "bool", "label": {"ru": "С номером (SPZ)", "uk": "З номером (SPZ)", "cs": "S SPZ (přihlášený)", "en": "Registered (with plates)"}, "group": "history", "required": false, "hint": {"ru": "В Чехии мопеды и скутеры регистрируются, получают номер (SPZ) и нужна страховка (povinné ručení).", "uk": "У Чехії мопеди та скутери реєструють, вони отримують номер (SPZ), і потрібна страховка (povinné ručení).", "cs": "Mopedy a skútry se v ČR přihlašují, mají SPZ a musí mít povinné ručení.", "en": "In Czechia mopeds and scooters must be registered, carry plates (SPZ) and have liability insurance (povinné ručení)."}, "filter": {}},
+    {"key": "exchange", "type": "bool", "label": {"ru": "Возможен обмен", "uk": "Можливий обмін", "cs": "Možná výměna", "en": "Exchange possible"}, "group": "history", "required": false, "filter": {}}
   ]
 }

@@ -47,7 +47,7 @@ func main() {
 
 	var tokens []string
 	for i := 0; i < *users; i++ {
-		tokens = append(tokens, login(fmt.Sprintf("+7700%07d", 1000+i), demoNames[i%len(demoNames)]))
+		tokens = append(tokens, login(fmt.Sprintf("+420777%06d", 1000+i), demoNames[i%len(demoNames)]))
 	}
 	log.Printf("logged in %d users", len(tokens))
 
@@ -61,7 +61,7 @@ func main() {
 			ids = append(ids, upload(tok))
 		}
 		body := map[string]any{
-			"category": cat, "price": genPrice(cat, attrs), "currency": "KZT",
+			"category": cat, "price": genPrice(cat, attrs), "currency": "CZK",
 			"city": pickCity(cities), "description": descriptions[rand.IntN(len(descriptions))],
 			"photos": ids, "attributes": attrs,
 		}
@@ -84,20 +84,23 @@ type refList struct {
 	} `json:"items"`
 }
 
-var demoNames = []string{"Айдар", "Мария", "Ержан", "Анна", "Тимур", "Динара", "Олег"}
+var demoNames = []string{"Олег", "Марія", "Jan Novák", "Анна", "Дмитрий", "Petra", "Тарас"}
 
+// Mixed languages on purpose: that is what the board looks like for the CIS community in Czechia.
 var descriptions = []string{
-	"Отличное состояние, все вопросы по телефону.",
-	"Срочно, торг у капота. Документы в порядке.",
-	"Один хозяин, обслуживание по регламенту. Без вложений.",
-	"Возможен обмен. Покажу в любое удобное время.",
-	"Чистый, ухоженный. Реальному покупателю — скидка.",
+	"Отличное состояние, все вопросы по телефону. Говорю по-русски и по-чешски.",
+	"Срочно, торг. Документы в порядке, STK действительна.",
+	"Один владелец, сервисная книжка. Без вложений.",
+	"Можливий обмін. Покажу в будь-який зручний час.",
+	"Чистий, доглянутий. Реальному покупцю — знижка.",
+	"Výborný stav, první majitel. Možná výměna.",
+	"Pěkný stav, servisní knížka, nekuřácké.",
 }
 
 func pickCity(c refList) string {
 	// Bias towards the biggest cities so demo filters show meaningful counts.
 	if rand.Float64() < 0.6 {
-		return []string{"almaty", "astana", "shymkent"}[rand.IntN(3)]
+		return []string{"praha", "praha", "brno", "ostrava", "plzen"}[rand.IntN(5)]
 	}
 	return c.Items[rand.IntN(len(c.Items))].ID
 }
@@ -105,9 +108,10 @@ func pickCity(c refList) string {
 // realistic ranges for common keys; everything else uses schema min/max.
 var ranges = map[string][2]float64{
 	"year": {2005, 2026}, "mileage_km": {0, 250000}, "engine_volume": {1.2, 4.0}, "power_hp": {80, 320},
-	"owners": {1, 4}, "seats": {2, 8}, "range_km": {200, 600}, "area_total": {22, 160}, "area_kitchen": {5, 25},
-	"floors_total": {2, 25}, "ceiling_m": {2.5, 3.3}, "year_built": {1965, 2026}, "motor_w": {800, 6000},
-	"battery_ah": {20, 60}, "max_speed_kmh": {25, 110},
+	"owners": {1, 4}, "seats": {2, 8}, "range_km": {200, 600}, "area_total": {22, 140},
+	"floors_total": {2, 14}, "year_built": {1930, 2026}, "motor_w": {800, 6000}, "battery_kwh": {30, 95},
+	"battery_ah": {20, 60}, "max_speed_kmh": {25, 110}, "deposit_czk": {10000, 60000}, "fees_czk": {1500, 6000},
+	"stk_until_year": {2026, 2028},
 }
 
 func genAttrs(s *clients.Schema) map[string]any {
@@ -201,12 +205,10 @@ func depMet(d *clients.DependsOn, vals map[string]any) bool {
 }
 
 func genPrice(cat string, attrs map[string]any) int64 {
-	r := map[string][2]float64{"cars": {2e6, 40e6}, "motorcycles": {4e5, 12e6}, "mopeds": {8e4, 1.5e6}, "apartments": {15e6, 90e6}}[cat]
-	switch attrs["deal_type"] {
-	case "rent_long":
-		r = [2]float64{120e3, 650e3}
-	case "rent_daily":
-		r = [2]float64{8e3, 45e3}
+	// CZK
+	r := map[string][2]float64{"cars": {60e3, 1.5e6}, "motorcycles": {30e3, 500e3}, "mopeds": {5e3, 80e3}, "apartments": {2.5e6, 15e6}}[cat]
+	if attrs["deal_type"] == "rent_long" {
+		r = [2]float64{9e3, 45e3}
 	}
 	p := r[0] + rand.Float64()*(r[1]-r[0])
 	return int64(math.Round(p/1000) * 1000)

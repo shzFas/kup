@@ -16,6 +16,7 @@ import (
 
 	"kup/pkg/events"
 	"kup/pkg/httpx"
+	"kup/pkg/i18n"
 )
 
 // Links in descriptions are a classic way to lure buyers off the platform.
@@ -115,8 +116,12 @@ func (s *server) brief(w http.ResponseWriter, r *http.Request) error {
 		p := photoURL(l.Photos[0], true)
 		photo = &p
 	}
+	titles := map[string]string{}
+	for _, lang := range i18n.All {
+		titles[string(lang)] = l.texts(lang).Title
+	}
 	httpx.JSON(w, 200, map[string]any{
-		"id": l.ID, "user_id": l.UserID, "title": l.Title, "photo": photo,
+		"id": l.ID, "user_id": l.UserID, "title": l.Title, "titles": titles, "photo": photo,
 		"price": l.Price, "currency": l.Currency, "status": l.Status,
 	})
 	return nil
@@ -162,17 +167,17 @@ func (s *server) createReport(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if !reportReasons[in.Reason] {
-		return httpx.Validation(map[string]string{"reason": "Выберите причину"})
+		return httpx.Validation(map[string]string{"reason": i18n.T(i18n.FromRequest(r), "report_reason")})
 	}
 	if len([]rune(in.Comment)) > 1000 {
-		return httpx.Validation(map[string]string{"comment": "Не более 1000 символов"})
+		return httpx.Validation(map[string]string{"comment": i18n.T(i18n.FromRequest(r), "comment_1000")})
 	}
 	l, err := s.byID(r.Context(), in.ListingID, nil)
 	if err != nil {
 		return err
 	}
 	if l.UserID == uid {
-		return httpx.BadRequest("Нельзя пожаловаться на своё объявление")
+		return httpx.Err(400, "bad_request", "report_own")
 	}
 	_, err = s.db.Exec(r.Context(), `INSERT INTO reports(id, listing_id, reporter_id, reason, comment) VALUES ($1,$2,$3,$4,$5)
 		ON CONFLICT (listing_id, reporter_id) DO NOTHING`, uuid.New(), l.ID, uid, in.Reason, strings.TrimSpace(in.Comment))
@@ -230,11 +235,11 @@ func (s *server) adminReports(w http.ResponseWriter, r *http.Request) error {
 		err := rows.Scan(&rp.ID, &rp.Reason, &rp.Comment, &rp.ReporterID, &rp.Status, &rp.CreatedAt, &rp.Count,
 			&l.ID, &l.UserID, &l.Category, &l.Status, &l.Title, &l.Description, &l.Price, &l.Currency, &l.PriceSuffix,
 			&l.City, &l.Lat, &l.Lng, &l.Attributes, &l.Labels, &l.Highlights, &l.SearchText, &l.Photos, &l.Views,
-			&l.PublishedAt, &l.UpdatedAt, &l.ExpiresAt, &l.ModReason)
+			&l.PublishedAt, &l.UpdatedAt, &l.ExpiresAt, &l.ModReason, &l.I18n)
 		if err != nil {
 			return err
 		}
-		rp.Listing = s.toCard(r.Context(), &l, true)
+		rp.Listing = s.toCard(r.Context(), &l, true, i18n.FromRequest(r))
 		items = append(items, rp)
 	}
 	if err := rows.Err(); err != nil {
@@ -257,7 +262,7 @@ func (s *server) resolveReport(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if in.Action != "dismiss" && in.Action != "block" {
-		return httpx.Validation(map[string]string{"action": "dismiss или block"})
+		return httpx.Validation(map[string]string{"action": "dismiss | block"})
 	}
 	id := chi.URLParam(r, "id")
 	if _, err := uuid.Parse(id); err != nil {
@@ -295,7 +300,7 @@ func (s *server) setBlocked(ctx context.Context, tx pgx.Tx, id string, block boo
 	if block {
 		reason = strings.TrimSpace(reason)
 		if reason == "" {
-			reason = "Нарушение правил размещения"
+			reason = i18n.T(i18n.Default, "default_block")
 		}
 		l.Status, l.ModReason = "blocked", &reason
 	} else {
@@ -384,7 +389,7 @@ func (s *server) adminListings(w http.ResponseWriter, r *http.Request) error {
 		if err != nil {
 			return err
 		}
-		items = append(items, s.toCard(r.Context(), l, true))
+		items = append(items, s.toCard(r.Context(), l, true, i18n.FromRequest(r)))
 	}
 	httpx.JSON(w, 200, map[string]any{"items": items, "total": total})
 	return rows.Err()

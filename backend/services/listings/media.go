@@ -41,24 +41,24 @@ func (s *server) uploadPhoto(w http.ResponseWriter, r *http.Request) error {
 	r.Body = http.MaxBytesReader(w, r.Body, maxUpload+1<<20)
 	file, _, err := r.FormFile("file")
 	if err != nil {
-		return httpx.NewError(400, "bad_file", "Файл не получен или больше 10 МБ")
+		return httpx.Err(400, "bad_file", "file_missing")
 	}
 	defer file.Close()
 	data, err := io.ReadAll(io.LimitReader(file, maxUpload+1))
 	if err != nil || len(data) > maxUpload {
-		return httpx.NewError(413, "too_large", "Файл больше 10 МБ")
+		return httpx.Err(413, "too_large", "file_too_large")
 	}
 
 	cfg, format, err := image.DecodeConfig(bytes.NewReader(data))
 	if err != nil {
-		return httpx.NewError(400, "bad_format", "Поддерживаются JPEG, PNG и WebP")
+		return httpx.Err(400, "bad_format", "file_format")
 	}
 	if cfg.Width*cfg.Height > maxPixels {
-		return httpx.NewError(400, "too_big", "Слишком большое изображение")
+		return httpx.Err(400, "too_big", "image_too_big")
 	}
 	img, _, err := image.Decode(bytes.NewReader(data))
 	if err != nil {
-		return httpx.NewError(400, "bad_format", "Не удалось прочитать изображение")
+		return httpx.Err(400, "bad_format", "image_broken")
 	}
 	if format == "jpeg" {
 		img = applyOrientation(img, jpegOrientation(data))

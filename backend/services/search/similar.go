@@ -11,10 +11,11 @@ import (
 	"github.com/google/uuid"
 
 	"kup/pkg/httpx"
+	"kup/pkg/i18n"
 )
 
 // similar returns listings like the given one: first a strict match
-// (same model / same rooms & deal), then looser filters to fill up the list.
+// (same model / same layout & deal), then looser filters to fill up the list.
 func (s *server) similar(w http.ResponseWriter, r *http.Request) error {
 	id := chi.URLParam(r, "id")
 	if _, err := uuid.Parse(id); err != nil {
@@ -46,7 +47,7 @@ func (s *server) similar(w http.ResponseWriter, r *http.Request) error {
 	}
 	var tiers [][]string
 	if doc.Category == "apartments" {
-		tiers = [][]string{{eq("deal_type"), eq("rooms"), fmt.Sprintf("city_id = %q", doc.CityID)}, {eq("deal_type"), fmt.Sprintf("city_id = %q", doc.CityID)}}
+		tiers = [][]string{{eq("deal_type"), eq("layout"), fmt.Sprintf("city_id = %q", doc.CityID)}, {eq("deal_type"), fmt.Sprintf("city_id = %q", doc.CityID)}}
 	} else {
 		year := ""
 		if y, ok := doc.Attrs["year"].(float64); ok {
@@ -67,7 +68,7 @@ func (s *server) similar(w http.ResponseWriter, r *http.Request) error {
 		if len(f) == len(base) {
 			continue
 		}
-		hits, err := s.query(r.Context(), f, limit)
+		hits, err := s.query(r.Context(), f, limit, i18n.FromRequest(r))
 		if err != nil {
 			return err
 		}
@@ -85,7 +86,7 @@ func (s *server) similar(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func (s *server) query(ctx context.Context, filter []string, limit int) ([]card, error) {
+func (s *server) query(ctx context.Context, filter []string, limit int, lang i18n.Lang) ([]card, error) {
 	res, err := s.ms.multiSearch(ctx, []msQuery{{IndexUID: s.ms.index, Filter: filter, Sort: []string{"published_ts:desc"},
 		Page: 1, HitsPerPage: limit, AttributesToRetrieve: retrieve}})
 	if err != nil {
@@ -97,8 +98,7 @@ func (s *server) query(ctx context.Context, filter []string, limit int) ([]card,
 		if err := json.Unmarshal(raw, &h); err != nil {
 			return nil, err
 		}
-		out = append(out, card{h.ID, h.Category, h.Title, h.Price, h.Currency, h.PriceSuffix, h.City, h.Photos, h.Attributes,
-			h.AttributeLabels, h.Highlights, h.Status, h.PublishedAt, nil})
+		out = append(out, h.card(lang))
 	}
 	return out, nil
 }

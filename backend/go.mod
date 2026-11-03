@@ -3,6 +3,7 @@ module kup
 go 1.27.1
 
 require (
+	github.com/coder/websocket v1.8.15
 	github.com/go-chi/chi/v5 v5.5.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/google/uuid v1.6.0
@@ -10,6 +11,7 @@ require (
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/nats-io/nats.go v1.55.0
 	golang.org/x/image v0.47.0
+	golang.org/x/text v0.43.0
 	golang.org/x/time v0.16.0
 )
 
@@ -35,6 +37,5 @@ require (
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
 	gopkg.in/ini.v1 v1.67.3 // indirect
 )

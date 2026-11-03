@@ -43,6 +43,25 @@ type ListingDoc struct {
 	UserID          string            `json:"user_id"`
 	Location        *Point            `json:"location"`
 	SearchText      string            `json:"search_text"` // labels + synonyms for full-text search
+	// I18n holds the display texts per language; the fields above are the default language.
+	I18n      map[string]Localized `json:"i18n"`
+	CityNames map[string]string    `json:"city_names"`
+}
+
+// Localized is the language-dependent part of a listing.
+type Localized struct {
+	Title       string            `json:"title"`
+	Labels      map[string]string `json:"labels"`
+	Highlights  []string          `json:"highlights"`
+	PriceSuffix string            `json:"price_suffix"`
+}
+
+// Pick returns texts for lang, falling back to the default fields.
+func (d *ListingDoc) Pick(lang string) Localized {
+	if l, ok := d.I18n[lang]; ok && l.Title != "" {
+		return l
+	}
+	return Localized{Title: d.Title, Labels: d.AttributeLabels, Highlights: d.Highlights, PriceSuffix: d.PriceSuffix}
 }
 
 type City struct {
@@ -95,3 +114,10 @@ func Connect(ctx context.Context, url string) (*nats.Conn, jetstream.JetStream, 
 	}
 	return nc, js, nil
 }
+
+// UserSubject is the NATS core subject for live events of one user
+// (chat messages, read receipts, notifications). Payload: a ServerEvent JSON (docs/API.md).
+func UserSubject(userID string) string { return "events.user." + userID }
+
+// UserSubjectAll matches every user's live events.
+const UserSubjectAll = "events.user.*"

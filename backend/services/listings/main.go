@@ -29,6 +29,7 @@ import (
 	"kup/pkg/db"
 	"kup/pkg/events"
 	"kup/pkg/httpx"
+	"kup/pkg/i18n"
 )
 
 //go:embed migrations/*.sql
@@ -69,7 +70,7 @@ func main() {
 	s := &server{
 		db: pool, catalog: clients.NewCatalog(config.String("CATALOG_URL", "http://catalog:8082")),
 		authURL: config.String("AUTH_URL", "http://auth:8081"), http: &http.Client{Timeout: 5 * time.Second},
-		s3: s3, bucket: bucket, js: js, currency: config.String("CURRENCY", "KZT"), wake: make(chan struct{}, 1),
+		s3: s3, bucket: bucket, js: js, currency: config.String("CURRENCY", "CZK"), wake: make(chan struct{}, 1),
 	}
 	go s.relayOutbox(ctx)
 	go s.expireLoop(ctx)
@@ -155,17 +156,18 @@ type row struct {
 	UpdatedAt   time.Time
 	ExpiresAt   time.Time
 	ModReason   *string
+	I18n        map[string]localized
 }
 
 const listingTTL = 30 * 24 * time.Hour
 
 const cols = `id, user_id, category, status, title, description, price, currency, price_suffix, city, lat, lng,
-	attributes, attribute_labels, highlights, search_text, photos::text[], views, published_at, updated_at, expires_at, moderation_reason`
+	attributes, attribute_labels, highlights, search_text, photos::text[], views, published_at, updated_at, expires_at, moderation_reason, i18n`
 
 func scanRow(sc interface{ Scan(...any) error }) (*row, error) {
 	var r row
 	err := sc.Scan(&r.ID, &r.UserID, &r.Category, &r.Status, &r.Title, &r.Description, &r.Price, &r.Currency, &r.PriceSuffix,
-		&r.City, &r.Lat, &r.Lng, &r.Attributes, &r.Labels, &r.Highlights, &r.SearchText, &r.Photos, &r.Views, &r.PublishedAt, &r.UpdatedAt, &r.ExpiresAt, &r.ModReason)
+		&r.City, &r.Lat, &r.Lng, &r.Attributes, &r.Labels, &r.Highlights, &r.SearchText, &r.Photos, &r.Views, &r.PublishedAt, &r.UpdatedAt, &r.ExpiresAt, &r.ModReason, &r.I18n)
 	return &r, err
 }
 
@@ -201,21 +203,27 @@ type input struct {
 }
 
 // apply validates in on top of r (empty row for create) and recomputes derived fields.
-func (s *server) apply(ctx context.Context, r *row, in input, uid string) error {
+func (s *server) apply(ctx context.Context, r *row, in input, uid string, lang i18n.Lang) error {
+	t := func(key string, args ...any) string { return i18n.T(lang, key, args...) }
 	errs := map[string]string{}
 	if in.Category != nil {
 		if r.Category != "" && *in.Category != r.Category {
-			errs["category"] = "Категорию нельзя изменить"
+			errs["category"] = t("category_fixed")
 		}
 		r.Category = *in.Category
 	}
-	sc, err := s.catalog.Schema(ctx, r.Category)
-	if errors.Is(err, clients.ErrNotFound) {
-		return httpx.Validation(map[string]string{"category": "Неизвестная категория"})
+	schemas := map[i18n.Lang]*clients.Schema{}
+	for _, l := range i18n.All {
+		sc, err := s.catalog.Schema(ctx, r.Category, string(l))
+		if errors.Is(err, clients.ErrNotFound) {
+			return httpx.Validation(map[string]string{"category": t("category_unknown")})
+		}
+		if err != nil {
+			return err
+		}
+		schemas[l] = sc
 	}
-	if err != nil {
-		return err
-	}
+	sc := schemas[lang]
 	refs, err := s.catalog.Refs(ctx)
 	if err != nil {
 		return err
@@ -223,13 +231,13 @@ func (s *server) apply(ctx context.Context, r *row, in input, uid string) error 
 
 	if in.Price != nil {
 		if *in.Price < 0 || *in.Price > 1e13 || *in.Price != float64(int64(*in.Price)) {
-			errs["price"] = "Укажите цену целым числом"
+			errs["price"] = t("price_integer")
 		} else {
 			r.Price = int64(*in.Price)
 		}
 	}
 	if r.Price <= 0 && errs["price"] == "" {
-		errs["price"] = "Укажите цену"
+		errs["price"] = t("price_required")
 	}
 	if in.Currency != nil {
 		r.Currency = *in.Currency
@@ -238,32 +246,32 @@ func (s *server) apply(ctx context.Context, r *row, in input, uid string) error 
 		r.Currency = s.currency
 	}
 	if r.Currency != s.currency {
-		errs["currency"] = "Поддерживается только " + s.currency
+		errs["currency"] = t("currency_only", s.currency)
 	}
 	if in.City != nil {
 		r.City = *in.City
 	}
 	if _, ok := refs["city"][r.City]; !ok {
-		errs["city"] = "Выберите город"
+		errs["city"] = t("city_choose")
 	}
 	if in.Description != nil {
 		r.Description = strings.TrimSpace(*in.Description)
 	}
 	if n := len([]rune(r.Description)); n > 5000 {
-		errs["description"] = "Не более 5000 символов"
+		errs["description"] = t("desc_5000")
 	} else if hasLink(r.Description) {
-		errs["description"] = "Ссылки в описании запрещены"
+		errs["description"] = t("desc_links")
 	}
 	if in.Location != nil {
 		if in.Location.Lat < -90 || in.Location.Lat > 90 || in.Location.Lng < -180 || in.Location.Lng > 180 {
-			errs["location"] = "Некорректные координаты"
+			errs["location"] = t("bad_location")
 		} else {
 			r.Lat, r.Lng = &in.Location.Lat, &in.Location.Lng
 		}
 	}
 	if in.Photos != nil {
-		if msg := s.checkPhotos(ctx, *in.Photos, uid); msg != "" {
-			errs["photos"] = msg
+		if key := s.checkPhotos(ctx, *in.Photos, uid); key != "" {
+			errs["photos"] = t(key)
 		} else {
 			r.Photos = *in.Photos
 		}
@@ -276,7 +284,7 @@ func (s *server) apply(ctx context.Context, r *row, in input, uid string) error 
 	if in.Attributes != nil {
 		raw = *in.Attributes
 	}
-	attrs, attrErrs := validateAttributes(sc, refs, raw)
+	attrs, attrErrs := validateAttributes(sc, refs, raw, lang)
 	for k, v := range attrErrs {
 		errs[k] = v
 	}
@@ -284,19 +292,21 @@ func (s *server) apply(ctx context.Context, r *row, in input, uid string) error 
 		return httpx.Validation(errs)
 	}
 	addComputed(r.Category, attrs, r.Price)
-	d := derive(sc, refs, attrs, refs["city"][r.City].Name)
-	r.Attributes, r.Labels, r.Title, r.Highlights, r.PriceSuffix, r.SearchText = d.Attributes, d.Labels, d.Title, d.Highlights, d.PriceSuffix, d.SearchText
+	d := derive(schemas, refs, attrs, refs["city"][r.City])
+	def := d.I18n[string(i18n.Default)]
+	r.Attributes, r.I18n, r.SearchText = d.Attributes, d.I18n, d.SearchText
+	r.Title, r.Labels, r.Highlights, r.PriceSuffix = def.Title, def.Labels, def.Highlights, def.PriceSuffix
 	return nil
 }
 
 func (s *server) checkPhotos(ctx context.Context, ids []string, uid string) string {
 	if len(ids) > 20 {
-		return "Не более 20 фото"
+		return "photos_max"
 	}
 	seen := map[string]bool{}
 	for _, id := range ids {
 		if _, err := uuid.Parse(id); err != nil || seen[id] {
-			return "Некорректный список фото"
+			return "photos_bad"
 		}
 		seen[id] = true
 	}
@@ -305,7 +315,7 @@ func (s *server) checkPhotos(ctx context.Context, ids []string, uid string) stri
 	}
 	var n int
 	if err := s.db.QueryRow(ctx, `SELECT count(*) FROM photos WHERE id = ANY($1::uuid[]) AND user_id=$2`, ids, uid).Scan(&n); err != nil || n != len(ids) {
-		return "Фото не найдены — загрузите их заново"
+		return "photos_missing"
 	}
 	return ""
 }
@@ -322,22 +332,22 @@ func (s *server) create(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if in.Category == nil {
-		return httpx.Validation(map[string]string{"category": "Выберите категорию"})
+		return httpx.Validation(map[string]string{"category": i18n.T(i18n.FromRequest(r), "category_choose")})
 	}
 	if in.Attributes == nil {
 		in.Attributes = &map[string]any{}
 	}
 	now := time.Now().UTC().Truncate(time.Microsecond)
 	l := &row{ID: uuid.NewString(), UserID: uid, Status: "active", Attributes: map[string]any{}, PublishedAt: now, UpdatedAt: now, ExpiresAt: now.Add(listingTTL)}
-	if err := s.apply(r.Context(), l, in, uid); err != nil {
+	if err := s.apply(r.Context(), l, in, uid, i18n.FromRequest(r)); err != nil {
 		return err
 	}
 	err = s.inTx(r.Context(), func(tx pgx.Tx) error {
 		_, err := tx.Exec(r.Context(), `INSERT INTO listings(id, user_id, category, status, title, description, price, currency, price_suffix,
-			city, lat, lng, attributes, attribute_labels, highlights, search_text, photos, published_at, created_at, updated_at, expires_at)
-			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::uuid[],$18,$18,$18,$19)`,
+			city, lat, lng, attributes, attribute_labels, highlights, search_text, photos, published_at, created_at, updated_at, expires_at, i18n)
+			VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17::uuid[],$18,$18,$18,$19,$20)`,
 			l.ID, l.UserID, l.Category, l.Status, l.Title, l.Description, l.Price, l.Currency, l.PriceSuffix,
-			l.City, l.Lat, l.Lng, l.Attributes, l.Labels, l.Highlights, l.SearchText, l.Photos, l.PublishedAt, l.ExpiresAt)
+			l.City, l.Lat, l.Lng, l.Attributes, l.Labels, l.Highlights, l.SearchText, l.Photos, l.PublishedAt, l.ExpiresAt, l.I18n)
 		if err != nil {
 			return err
 		}
@@ -373,7 +383,7 @@ func (s *server) update(w http.ResponseWriter, r *http.Request) error {
 			return httpx.Forbidden()
 		}
 		oldPrice := l.Price
-		if err := s.apply(r.Context(), l, in, uid); err != nil {
+		if err := s.apply(r.Context(), l, in, uid, i18n.FromRequest(r)); err != nil {
 			return err
 		}
 		if l.Price != oldPrice {
@@ -387,8 +397,8 @@ func (s *server) update(w http.ResponseWriter, r *http.Request) error {
 			}
 		}
 		_, err = tx.Exec(r.Context(), `UPDATE listings SET title=$2, description=$3, price=$4, currency=$5, price_suffix=$6, city=$7,
-			lat=$8, lng=$9, attributes=$10, attribute_labels=$11, highlights=$12, search_text=$13, photos=$14::uuid[], updated_at=now() WHERE id=$1`,
-			l.ID, l.Title, l.Description, l.Price, l.Currency, l.PriceSuffix, l.City, l.Lat, l.Lng, l.Attributes, l.Labels, l.Highlights, l.SearchText, l.Photos)
+			lat=$8, lng=$9, attributes=$10, attribute_labels=$11, highlights=$12, search_text=$13, photos=$14::uuid[], i18n=$15, updated_at=now() WHERE id=$1`,
+			l.ID, l.Title, l.Description, l.Price, l.Currency, l.PriceSuffix, l.City, l.Lat, l.Lng, l.Attributes, l.Labels, l.Highlights, l.SearchText, l.Photos, l.I18n)
 		if err != nil {
 			return err
 		}
@@ -412,7 +422,7 @@ func (s *server) setStatus(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if in.Status != "active" && in.Status != "archived" && in.Status != "sold" {
-		return httpx.Validation(map[string]string{"status": "Допустимо: active, archived, sold"})
+		return httpx.Validation(map[string]string{"status": i18n.T(i18n.FromRequest(r), "status_allowed")})
 	}
 	return s.changeStatus(w, r, uid, in.Status)
 }
@@ -435,7 +445,7 @@ func (s *server) changeStatus(w http.ResponseWriter, r *http.Request, uid, statu
 			return httpx.Forbidden()
 		}
 		if l.Status == "blocked" && status != "deleted" {
-			return httpx.NewError(403, "blocked", "Объявление заблокировано модератором")
+			return httpx.Err(403, "blocked", "listing_blocked")
 		}
 		// Re-activating (prolonging) bumps the listing to the top, like a fresh publication.
 		bump := status == "active" && l.Status != "active"
@@ -527,17 +537,25 @@ type seller struct {
 	MemberSince time.Time `json:"member_since"`
 }
 
+// texts returns the display texts in lang (falls back to the default columns).
+func (l *row) texts(lang i18n.Lang) localized {
+	if t, ok := l.I18n[string(lang)]; ok && t.Title != "" {
+		return t
+	}
+	return localized{Title: l.Title, Labels: l.Labels, Highlights: l.Highlights, PriceSuffix: l.PriceSuffix}
+}
+
 // publicAttrs hides free-text fields (VIN) from everyone but the owner.
-func publicAttrs(l *row, owner bool) (map[string]any, map[string]string) {
+func publicAttrs(l *row, labels map[string]string, owner bool) (map[string]any, map[string]string) {
 	if owner {
-		return l.Attributes, l.Labels
+		return l.Attributes, labels
 	}
 	a := make(map[string]any, len(l.Attributes))
-	lb := make(map[string]string, len(l.Labels))
+	lb := make(map[string]string, len(labels))
 	for k, v := range l.Attributes {
 		a[k] = v
 	}
-	for k, v := range l.Labels {
+	for k, v := range labels {
 		lb[k] = v
 	}
 	if vin, ok := a["vin"].(string); ok && len(vin) == 17 {
@@ -547,7 +565,7 @@ func publicAttrs(l *row, owner bool) (map[string]any, map[string]string) {
 	return a, lb
 }
 
-func (s *server) toCard(ctx context.Context, l *row, owner bool) card {
+func (s *server) toCard(ctx context.Context, l *row, owner bool, lang i18n.Lang) card {
 	refs, _ := s.catalog.Refs(ctx)
 	photos := make([]string, 0, 5)
 	for i, p := range l.Photos {
@@ -556,18 +574,20 @@ func (s *server) toCard(ctx context.Context, l *row, owner bool) card {
 		}
 		photos = append(photos, photoURL(p, true))
 	}
-	attrs, labels := publicAttrs(l, owner)
+	t := l.texts(lang)
+	attrs, labels := publicAttrs(l, t.Labels, owner)
 	return card{
-		ID: l.ID, Category: l.Category, Title: l.Title, Price: l.Price, Currency: l.Currency, PriceSuffix: l.PriceSuffix,
-		City: events.City{ID: l.City, Name: refs["city"][l.City].Name}, Photos: photos, Attributes: attrs, AttributeLabels: labels,
-		Highlights: l.Highlights, Status: l.Status, PublishedAt: l.PublishedAt,
+		ID: l.ID, Category: l.Category, Title: t.Title, Price: l.Price, Currency: l.Currency, PriceSuffix: t.PriceSuffix,
+		City: events.City{ID: l.City, Name: refs["city"][l.City].Name(string(lang))}, Photos: photos, Attributes: attrs, AttributeLabels: labels,
+		Highlights: t.Highlights, Status: l.Status, PublishedAt: l.PublishedAt,
 	}
 }
 
 func (s *server) writeDetail(w http.ResponseWriter, r *http.Request, l *row, status int) error {
 	uid := httpx.UserID(r)
 	owner := uid == l.UserID
-	d := detail{card: s.toCard(r.Context(), l, owner), Description: l.Description, Views: l.Views, IsOwner: owner, UpdatedAt: l.UpdatedAt, PhotoIDs: l.Photos}
+	lang := i18n.FromRequest(r)
+	d := detail{card: s.toCard(r.Context(), l, owner, lang), Description: l.Description, Views: l.Views, IsOwner: owner, UpdatedAt: l.UpdatedAt, PhotoIDs: l.Photos}
 	d.Photos = make([]string, len(l.Photos))
 	for i, p := range l.Photos {
 		d.Photos[i] = photoURL(p, false)
@@ -585,11 +605,11 @@ func (s *server) writeDetail(w http.ResponseWriter, r *http.Request, l *row, sta
 	if u, err := s.user(r.Context(), l.UserID); err == nil {
 		d.Seller = seller{ID: u.ID, Name: u.Name, MemberSince: u.CreatedAt}
 		if d.Seller.Name == "" {
-			d.Seller.Name = "Пользователь"
+			d.Seller.Name = i18n.T(lang, "default_user")
 		}
 	} else {
 		slog.Warn("seller lookup failed", "err", err)
-		d.Seller = seller{ID: l.UserID, Name: "Пользователь"}
+		d.Seller = seller{ID: l.UserID, Name: i18n.T(lang, "default_user")}
 	}
 	if uid != "" {
 		fav := false
@@ -630,7 +650,7 @@ func (s *server) phone(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if l.Status != "active" {
-		return httpx.NewError(410, "inactive", "Объявление снято с публикации")
+		return httpx.Err(410, "inactive", "listing_inactive")
 	}
 	u, err := s.user(r.Context(), l.UserID)
 	if err != nil {
@@ -693,7 +713,7 @@ func (s *server) writeCards(w http.ResponseWriter, r *http.Request, q string, ar
 	favs := s.favoriteSet(r.Context(), uid, list)
 	items := make([]card, 0, len(list))
 	for _, l := range list {
-		c := s.toCard(r.Context(), l, owner)
+		c := s.toCard(r.Context(), l, owner, i18n.FromRequest(r))
 		f := favs[l.ID]
 		c.IsFavorite = &f
 		items = append(items, c)
@@ -828,23 +848,34 @@ func (s *server) inTx(ctx context.Context, fn func(pgx.Tx) error) error {
 }
 
 func (s *server) doc(ctx context.Context, l *row) events.ListingDoc {
-	c := s.toCard(ctx, l, false)
+	c := s.toCard(ctx, l, false, i18n.Default)
 	attrs := map[string]any{}
-	labels := map[string]string{}
 	for k, v := range l.Attributes {
 		if k != "vin" { // free text is not searchable/filterable
 			attrs[k] = v
 		}
 	}
-	for k, v := range l.Labels {
-		if k != "vin" {
-			labels[k] = v
+	noVIN := func(m map[string]string) map[string]string {
+		out := make(map[string]string, len(m))
+		for k, v := range m {
+			if k != "vin" {
+				out[k] = v
+			}
 		}
+		return out
 	}
+	labels := noVIN(l.Labels)
+	loc := map[string]events.Localized{}
+	for lang, t := range l.I18n {
+		t.Labels = noVIN(t.Labels)
+		loc[lang] = t
+	}
+	refs, _ := s.catalog.Refs(ctx)
 	d := events.ListingDoc{
 		ID: l.ID, Category: l.Category, Title: l.Title, Description: l.Description, Price: l.Price, Currency: l.Currency,
 		PriceSuffix: l.PriceSuffix, City: c.City, Photos: c.Photos, Attributes: attrs, AttributeLabels: labels,
 		Highlights: l.Highlights, Status: l.Status, PublishedAt: l.PublishedAt, UserID: l.UserID, SearchText: l.SearchText,
+		I18n: loc, CityNames: refs["city"][l.City].Names,
 	}
 	if l.Lat != nil && l.Lng != nil {
 		d.Location = &events.Point{Lat: *l.Lat, Lng: *l.Lng}

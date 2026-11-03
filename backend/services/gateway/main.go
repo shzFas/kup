@@ -17,6 +17,7 @@ import (
 
 	"kup/pkg/config"
 	"kup/pkg/httpx"
+	"kup/pkg/i18n"
 	"kup/pkg/jwtx"
 )
 
@@ -49,6 +50,7 @@ func main() {
 	r.Handle("/v1/categories", catalog)
 	r.Handle("/v1/categories/*", catalog)
 	r.Handle("/v1/refs/*", catalog)
+	r.Handle("/v1/suggest", catalog)
 	r.Handle("/v1/listings", listings)
 	r.Handle("/v1/listings/*", listings)
 	r.Handle("/v1/me/saved-searches", notify)
@@ -65,8 +67,8 @@ func main() {
 	r.Handle("/v1/search", search)
 	r.Handle("/v1/search/*", search)
 	r.Get("/media/photos/*", media)
-	r.NotFound(func(w http.ResponseWriter, _ *http.Request) {
-		httpx.JSON(w, 404, httpx.ErrorBody{Error: "not_found", Message: "Не найдено"})
+	r.NotFound(func(w http.ResponseWriter, req *http.Request) {
+		httpx.JSON(w, 404, httpx.ErrorBody{Error: "not_found", Message: i18n.T(i18n.FromRequest(req), "not_found")})
 	})
 
 	httpx.Serve(config.String("ADDR", ":8080"), r)
@@ -80,7 +82,7 @@ func proxy(target string) http.Handler {
 	p := httputil.NewSingleHostReverseProxy(u)
 	p.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		slog.Error("upstream", "target", target, "path", r.URL.Path, "err", err)
-		httpx.JSON(w, 502, httpx.ErrorBody{Error: "unavailable", Message: "Сервис временно недоступен"})
+		httpx.JSON(w, 502, httpx.ErrorBody{Error: "unavailable", Message: i18n.T(i18n.FromRequest(r), "unavailable")})
 	}
 	return p
 }
@@ -144,7 +146,7 @@ func withUser(secret []byte) func(http.Handler) http.Handler {
 						next.ServeHTTP(w, r)
 						return
 					}
-					httpx.JSON(w, 401, httpx.ErrorBody{Error: "unauthorized", Message: "Сессия истекла, войдите снова"})
+					httpx.JSON(w, 401, httpx.ErrorBody{Error: "unauthorized", Message: i18n.T(i18n.FromRequest(r), "session_expired")})
 					return
 				}
 				r.Header.Set(httpx.UserHeader, uid)
@@ -241,7 +243,7 @@ func (l *ipLimiter) middleware(next http.Handler) http.Handler {
 		l.mu.Unlock()
 		if !allow {
 			w.Header().Set("Retry-After", "1")
-			httpx.JSON(w, 429, httpx.ErrorBody{Error: "too_many_requests", Message: "Слишком много запросов, подождите немного"})
+			httpx.JSON(w, 429, httpx.ErrorBody{Error: "too_many_requests", Message: i18n.T(i18n.FromRequest(r), "rate_limited")})
 			return
 		}
 		next.ServeHTTP(w, r)

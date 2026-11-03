@@ -27,6 +27,7 @@ import (
 	"kup/pkg/config"
 	"kup/pkg/db"
 	"kup/pkg/httpx"
+	"kup/pkg/i18n"
 	"kup/pkg/jwtx"
 )
 
@@ -89,7 +90,7 @@ func main() {
 		admins:  map[string]bool{},
 	}
 	for _, p := range strings.Split(config.String("ADMIN_PHONES", ""), ",") {
-		if p, err := normalizePhone(p); err == nil {
+		if p, err := normalizePhone(p, i18n.Default); err == nil {
 			s.admins[p] = true
 		}
 	}
@@ -110,17 +111,31 @@ func main() {
 	httpx.Serve(config.String("ADDR", ":8081"), r)
 }
 
-var phoneRe = regexp.MustCompile(`^\+[1-9]\d{9,14}$`)
+var (
+	phoneRe   = regexp.MustCompile(`^\+[1-9]\d{7,14}$`)
+	czLocalRe = regexp.MustCompile(`^[1-9]\d{8}$`)
+)
 
-func normalizePhone(p string) (string, error) {
-	p = strings.NewReplacer(" ", "", "-", "", "(", "", ")", "").Replace(strings.TrimSpace(p))
-	if strings.HasPrefix(p, "8") && len(p) == 11 { // local KZ/RU format 8XXXXXXXXXX
-		p = "+7" + p[1:]
+// normalizePhone returns E.164. Czech local numbers (9 digits) get +420,
+// "00" international prefix becomes "+". Foreign numbers (+380, +7...) are kept as is.
+func normalizePhone(p string, lang i18n.Lang) (string, error) {
+	p = strings.NewReplacer(" ", "", "-", "", "(", "", ")", "", ".", "").Replace(strings.TrimSpace(p))
+	switch {
+	case strings.HasPrefix(p, "00"):
+		p = "+" + p[2:]
+	case czLocalRe.MatchString(p):
+		p = "+420" + p
 	}
 	if !phoneRe.MatchString(p) {
-		return "", httpx.Validation(map[string]string{"phone": "Введите номер в формате +77011234567"})
+		return "", httpx.Validation(map[string]string{"phone": i18n.T(lang, "phone_format")})
 	}
 	return p, nil
+}
+
+const userCols = `id, phone, name, role, lang, created_at`
+
+func scanUser(row pgx.Row, u *user) error {
+	return row.Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.Lang, &u.CreatedAt)
 }
 
 func hashCode(phone, code string) []byte {
@@ -135,7 +150,8 @@ func (s *server) requestOTP(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &in); err != nil {
 		return err
 	}
-	phone, err := normalizePhone(in.Phone)
+	lang := i18n.FromRequest(r)
+	phone, err := normalizePhone(in.Phone, lang)
 	if err != nil {
 		return err
 	}
@@ -145,8 +161,7 @@ func (s *server) requestOTP(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	if wait := otpResend - time.Since(lastSent); err == nil && wait > 0 {
-		return &httpx.Error{Status: 429, Body: httpx.ErrorBody{Error: "too_many_requests",
-			Message: fmt.Sprintf("Повторно запросить код можно через %d сек.", int(wait.Seconds())+1)}}
+		return httpx.Err(429, "too_many_requests", "otp_wait", int(wait.Seconds())+1)
 	}
 	n, _ := rand.Int(rand.Reader, big.NewInt(10000))
 	code := fmt.Sprintf("%04d", n.Int64())
@@ -157,7 +172,7 @@ func (s *server) requestOTP(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	if err := s.sms.Send(r.Context(), phone, "Код для входа в kup: "+code); err != nil {
+	if err := s.sms.Send(r.Context(), phone, i18n.T(lang, "otp_sms", code)); err != nil {
 		return err
 	}
 	resp := map[string]any{"sent": true, "retry_after_sec": int(otpResend.Seconds())}
@@ -176,11 +191,12 @@ func (s *server) verifyOTP(w http.ResponseWriter, r *http.Request) error {
 	if err := httpx.Decode(r, &in); err != nil {
 		return err
 	}
-	phone, err := normalizePhone(in.Phone)
+	lang := i18n.FromRequest(r)
+	phone, err := normalizePhone(in.Phone, lang)
 	if err != nil {
 		return err
 	}
-	invalid := httpx.NewError(400, "invalid_code", "Неверный или просроченный код")
+	invalid := httpx.Err(400, "invalid_code", "otp_invalid")
 
 	tx, err := s.db.Begin(r.Context())
 	if err != nil {
@@ -216,9 +232,9 @@ func (s *server) verifyOTP(w http.ResponseWriter, r *http.Request) error {
 	}
 	var u user
 	err = tx.QueryRow(r.Context(), `
-		INSERT INTO users(id, phone, role) VALUES ($1,$2,$3)
+		INSERT INTO users(id, phone, role, lang) VALUES ($1,$2,$3,$4)
 		ON CONFLICT (phone) DO UPDATE SET role = CASE WHEN $3 = 'admin' THEN 'admin' ELSE users.role END
-		RETURNING id, phone, name, role, created_at`, uuid.New(), phone, s.roleFor(phone)).Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.CreatedAt)
+		RETURNING `+userCols, uuid.New(), phone, s.roleFor(phone), string(lang)).Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.Lang, &u.CreatedAt)
 	if err != nil {
 		return err
 	}
@@ -238,6 +254,7 @@ type user struct {
 	Phone     string    `json:"phone"`
 	Name      string    `json:"name"`
 	Role      string    `json:"role"`
+	Lang      string    `json:"lang"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -304,8 +321,7 @@ func (s *server) refresh(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var u user
-	if err := tx.QueryRow(r.Context(), `SELECT id, phone, name, role, created_at FROM users WHERE id=$1`, userID).
-		Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.CreatedAt); err != nil {
+	if err := scanUser(tx.QueryRow(r.Context(), `SELECT `+userCols+` FROM users WHERE id=$1`, userID), &u); err != nil {
 		return err
 	}
 	resp, err := s.issue(r.Context(), tx, u)
@@ -344,7 +360,7 @@ func (s *server) loadUser(ctx context.Context, id string) (*user, error) {
 		return nil, httpx.NotFound()
 	}
 	var u user
-	err := s.db.QueryRow(ctx, `SELECT id, phone, name, role, created_at FROM users WHERE id=$1`, id).Scan(&u.ID, &u.Phone, &u.Name, &u.Role, &u.CreatedAt)
+	err := scanUser(s.db.QueryRow(ctx, `SELECT `+userCols+` FROM users WHERE id=$1`, id), &u)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, httpx.NotFound()
 	}
@@ -370,16 +386,33 @@ func (s *server) patchMe(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	var in struct {
-		Name string `json:"name"`
+		Name *string `json:"name"`
+		Lang *string `json:"lang"`
 	}
 	if err := httpx.Decode(r, &in); err != nil {
 		return err
 	}
-	name := strings.TrimSpace(in.Name)
-	if n := len([]rune(name)); n < 1 || n > 60 {
-		return httpx.Validation(map[string]string{"name": "Имя от 1 до 60 символов"})
+	lang := i18n.FromRequest(r)
+	errs := map[string]string{}
+	var name, newLang *string
+	if in.Name != nil {
+		n := strings.TrimSpace(*in.Name)
+		if l := len([]rune(n)); l < 1 || l > 60 {
+			errs["name"] = i18n.T(lang, "name_length")
+		}
+		name = &n
 	}
-	if _, err := s.db.Exec(r.Context(), `UPDATE users SET name=$1, updated_at=now() WHERE id=$2`, name, uid); err != nil {
+	if in.Lang != nil {
+		if !i18n.Valid(*in.Lang) {
+			errs["lang"] = i18n.T(lang, "lang_invalid")
+		}
+		newLang = in.Lang
+	}
+	if len(errs) > 0 {
+		return httpx.Validation(errs)
+	}
+	if _, err := s.db.Exec(r.Context(), `UPDATE users SET name=COALESCE($1, name), lang=COALESCE($2, lang), updated_at=now() WHERE id=$3`,
+		name, newLang, uid); err != nil {
 		return err
 	}
 	u, err := s.loadUser(r.Context(), uid)

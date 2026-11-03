@@ -23,6 +23,7 @@ import (
 	"kup/pkg/config"
 	"kup/pkg/events"
 	"kup/pkg/httpx"
+	"kup/pkg/i18n"
 )
 
 type server struct {
@@ -124,7 +125,7 @@ func (s *server) configureIndex(ctx context.Context) error {
 	}
 	filterable := map[string]bool{"id": true, "category": true, "_geo": true}
 	for _, c := range cats {
-		sc, err := s.catalog.Schema(ctx, c)
+		sc, err := s.catalog.Schema(ctx, c, string(i18n.Default))
 		if err != nil {
 			return err
 		}
@@ -156,6 +157,7 @@ func toIndexDoc(d events.ListingDoc) map[string]any {
 		"price": d.Price, "currency": d.Currency, "price_suffix": d.PriceSuffix, "city": d.City, "city_id": d.City.ID,
 		"photos": d.Photos, "has_photo": len(d.Photos) > 0, "attrs": d.Attributes, "attribute_labels": d.AttributeLabels,
 		"highlights": d.Highlights, "status": d.Status, "published_at": d.PublishedAt, "published_ts": d.PublishedAt.Unix(),
+		"i18n": d.I18n, "city_names": d.CityNames,
 	}
 	if d.Location != nil {
 		m["_geo"] = map[string]float64{"lat": d.Location.Lat, "lng": d.Location.Lng}
@@ -338,16 +340,16 @@ func (s *server) buildPlan(ctx context.Context, r *http.Request) (*plan, error) 
 	if err := httpx.Decode(r, &in); err != nil {
 		return nil, err
 	}
-	sc, err := s.catalog.Schema(ctx, in.Category)
+	sc, err := s.catalog.Schema(ctx, in.Category, string(i18n.FromRequest(r)))
 	if errors.Is(err, clients.ErrNotFound) {
-		return nil, httpx.BadRequest("Неизвестная категория")
+		return nil, httpx.Err(400, "bad_request", "category_unknown")
 	}
 	if err != nil {
 		return nil, err
 	}
 	p := &plan{sc: sc, byKey: map[string]string{}, query: strings.TrimSpace(in.Query), page: in.Page, limit: in.Limit}
 	if len([]rune(p.query)) > 200 {
-		return nil, httpx.BadRequest("Слишком длинный запрос")
+		return nil, httpx.Err(400, "bad_request", "query_long")
 	}
 	if p.page < 1 {
 		p.page = 1
@@ -361,7 +363,7 @@ func (s *server) buildPlan(ctx context.Context, r *http.Request) (*plan, error) 
 	p.base = []string{fmt.Sprintf("category = %q", sc.Category)}
 	if g := in.Geo; g != nil {
 		if g.RadiusKm <= 0 || g.RadiusKm > 500 || g.Lat < -90 || g.Lat > 90 || g.Lng < -180 || g.Lng > 180 {
-			return nil, httpx.BadRequest("Некорректные параметры гео-фильтра")
+			return nil, httpx.Err(400, "bad_request", "geo_invalid")
 		}
 		p.base = append(p.base, fmt.Sprintf("_geoRadius(%f, %f, %d)", g.Lat, g.Lng, int(g.RadiusKm*1000)))
 	}
@@ -373,11 +375,11 @@ func (s *server) buildPlan(ctx context.Context, r *http.Request) (*plan, error) 
 	for key, ops := range in.Filters {
 		def, ok := defs[key]
 		if !ok {
-			return nil, httpx.BadRequest("Неизвестный фильтр: " + key)
+			return nil, httpx.Err(400, "bad_request", "filter_unknown", key)
 		}
 		expr, err := filterExpr(def, ops)
 		if err != nil {
-			return nil, httpx.BadRequest(fmt.Sprintf("Фильтр %s: %v", key, err))
+			return nil, httpx.Err(400, "bad_request", "filter_bad", key, err.Error())
 		}
 		if expr != "" {
 			p.byKey[key] = expr
@@ -393,7 +395,7 @@ func (s *server) buildPlan(ctx context.Context, r *http.Request) (*plan, error) 
 		valid = valid || o.Value == sortKey
 	}
 	if !valid {
-		return nil, httpx.BadRequest("Неизвестная сортировка")
+		return nil, httpx.Err(400, "bad_request", "sort_unknown")
 	}
 	p.sort = []string{sortFields[sortKey]}
 	if sortKey != "date_desc" {
@@ -409,7 +411,7 @@ func (s *server) buildPlan(ctx context.Context, r *http.Request) (*plan, error) 
 	} else {
 		for _, k := range in.Facets {
 			if d, ok := defs[k]; !ok || !d.Facet {
-				return nil, httpx.BadRequest("Фасет недоступен: " + k)
+				return nil, httpx.Err(400, "bad_request", "facet_bad", k)
 			}
 			p.facets = append(p.facets, k)
 		}
@@ -428,7 +430,7 @@ func filterExpr(def clients.Filter, ops map[string]json.RawMessage) (string, err
 			ok = ok || a == op
 		}
 		if !ok {
-			return "", fmt.Errorf("оператор %q не поддерживается", op)
+			return "", fmt.Errorf("operator %q is not supported", op)
 		}
 	}
 	switch def.Widget {
@@ -441,7 +443,7 @@ func filterExpr(def clients.Filter, ops map[string]json.RawMessage) (string, err
 			}
 			var n float64
 			if err := json.Unmarshal(raw, &n); err != nil {
-				return "", fmt.Errorf("ожидается число")
+				return "", fmt.Errorf("number expected")
 			}
 			sym := ">="
 			if op == "lte" {
@@ -457,18 +459,18 @@ func filterExpr(def clients.Filter, ops map[string]json.RawMessage) (string, err
 		}
 		var vals []string
 		if err := json.Unmarshal(ops[op], &vals); err != nil {
-			return "", fmt.Errorf("ожидается список строк")
+			return "", fmt.Errorf("list of strings expected")
 		}
 		if len(vals) == 0 {
 			return "", nil
 		}
 		if len(vals) > 100 {
-			return "", fmt.Errorf("слишком много значений")
+			return "", fmt.Errorf("too many values")
 		}
 		quoted := make([]string, len(vals))
 		for i, v := range vals {
 			if !safeValue.MatchString(v) || (def.Options != nil && !hasOption(def, v)) {
-				return "", fmt.Errorf("недопустимое значение %q", v)
+				return "", fmt.Errorf("invalid value %q", v)
 			}
 			quoted[i] = strconv.Quote(v)
 		}
@@ -483,7 +485,7 @@ func filterExpr(def clients.Filter, ops map[string]json.RawMessage) (string, err
 	case "toggle":
 		var b bool
 		if err := json.Unmarshal(ops["eq"], &b); err != nil {
-			return "", fmt.Errorf("ожидается true/false")
+			return "", fmt.Errorf("true/false expected")
 		}
 		if !b {
 			return "", nil
@@ -492,10 +494,10 @@ func filterExpr(def clients.Filter, ops map[string]json.RawMessage) (string, err
 	case "select":
 		var v string
 		if err := json.Unmarshal(ops["eq"], &v); err != nil {
-			return "", fmt.Errorf("ожидается строка")
+			return "", fmt.Errorf("string expected")
 		}
 		if !hasOption(def, v) {
-			return "", fmt.Errorf("недопустимое значение %q", v)
+			return "", fmt.Errorf("invalid value %q", v)
 		}
 		if def.Key == "posted_within" {
 			days, _ := strconv.Atoi(v)
@@ -503,7 +505,7 @@ func filterExpr(def clients.Filter, ops map[string]json.RawMessage) (string, err
 		}
 		return fmt.Sprintf("%s = %q", field, v), nil
 	}
-	return "", fmt.Errorf("неизвестный виджет")
+	return "", fmt.Errorf("unknown widget")
 }
 
 func hasOption(def clients.Filter, v string) bool {
@@ -532,19 +534,33 @@ func (p *plan) filters(skip string) []string {
 }
 
 type hitDoc struct {
-	ID              string            `json:"id"`
-	Category        string            `json:"category"`
-	Title           string            `json:"title"`
-	Price           int64             `json:"price"`
-	Currency        string            `json:"currency"`
-	PriceSuffix     string            `json:"price_suffix"`
-	City            events.City       `json:"city"`
-	Photos          []string          `json:"photos"`
-	Attributes      map[string]any    `json:"attrs"`
-	AttributeLabels map[string]string `json:"attribute_labels"`
-	Highlights      []string          `json:"highlights"`
-	Status          string            `json:"status"`
-	PublishedAt     time.Time         `json:"published_at"`
+	ID              string                      `json:"id"`
+	Category        string                      `json:"category"`
+	Title           string                      `json:"title"`
+	Price           int64                       `json:"price"`
+	Currency        string                      `json:"currency"`
+	PriceSuffix     string                      `json:"price_suffix"`
+	City            events.City                 `json:"city"`
+	Photos          []string                    `json:"photos"`
+	Attributes      map[string]any              `json:"attrs"`
+	AttributeLabels map[string]string           `json:"attribute_labels"`
+	Highlights      []string                    `json:"highlights"`
+	Status          string                      `json:"status"`
+	PublishedAt     time.Time                   `json:"published_at"`
+	I18n            map[string]events.Localized `json:"i18n"`
+	CityNames       map[string]string           `json:"city_names"`
+}
+
+// card renders a hit in lang, falling back to the default-language fields.
+func (h *hitDoc) card(lang i18n.Lang) card {
+	d := events.ListingDoc{Title: h.Title, AttributeLabels: h.AttributeLabels, Highlights: h.Highlights, PriceSuffix: h.PriceSuffix, I18n: h.I18n}
+	t := d.Pick(string(lang))
+	city := h.City
+	if n := h.CityNames[string(lang)]; n != "" {
+		city.Name = n
+	}
+	return card{h.ID, h.Category, t.Title, h.Price, h.Currency, t.PriceSuffix, city, h.Photos, h.Attributes,
+		t.Labels, t.Highlights, h.Status, h.PublishedAt, nil}
 }
 
 type card struct {
@@ -564,7 +580,7 @@ type card struct {
 	IsFavorite      *bool             `json:"is_favorite,omitempty"`
 }
 
-var retrieve = []string{"id", "category", "title", "price", "currency", "price_suffix", "city", "photos", "attrs", "attribute_labels", "highlights", "status", "published_at"}
+var retrieve = []string{"id", "category", "title", "price", "currency", "price_suffix", "city", "photos", "attrs", "attribute_labels", "highlights", "status", "published_at", "i18n", "city_names"}
 
 func (s *server) search(w http.ResponseWriter, r *http.Request) error {
 	p, err := s.buildPlan(r.Context(), r)
@@ -609,8 +625,7 @@ func (s *server) search(w http.ResponseWriter, r *http.Request) error {
 		if err := json.Unmarshal(raw, &h); err != nil {
 			return err
 		}
-		items = append(items, card{h.ID, h.Category, h.Title, h.Price, h.Currency, h.PriceSuffix, h.City, h.Photos, h.Attributes,
-			h.AttributeLabels, h.Highlights, h.Status, h.PublishedAt, nil})
+		items = append(items, h.card(i18n.FromRequest(r)))
 		ids = append(ids, h.ID)
 	}
 	if uid := httpx.UserID(r); uid != "" && len(ids) > 0 {

@@ -3,16 +3,22 @@ package main
 import (
 	"image"
 	"image/color"
+	"strings"
 	"testing"
 
 	"kup/pkg/clients"
+	"kup/pkg/i18n"
 )
 
 func p[T any](v T) *T { return &v }
 
 var testRefs = map[string]map[string]clients.RefItem{
-	"car_make":  {"toyota": {ID: "toyota", Name: "Toyota", Aliases: []string{"тойота"}}, "bmw": {ID: "bmw", Name: "BMW"}},
-	"car_model": {"toyota-camry": {ID: "toyota-camry", Name: "Camry", Parent: p("toyota"), Aliases: []string{"камри"}}},
+	"car_make":  {"toyota": {ID: "toyota", Names: names("Toyota"), Aliases: []string{"тойота"}}, "bmw": {ID: "bmw", Names: names("BMW")}},
+	"car_model": {"toyota-camry": {ID: "toyota-camry", Names: names("Camry"), Parent: p("toyota"), Aliases: []string{"камри"}}},
+}
+
+func names(n string) map[string]string {
+	return map[string]string{"ru": n, "uk": n, "cs": n, "en": n}
 }
 
 var carSchema = &clients.Schema{
@@ -33,7 +39,7 @@ var carSchema = &clients.Schema{
 func TestValidateOK(t *testing.T) {
 	raw := map[string]any{"make": "toyota", "model": "toyota-camry", "year": 2018.0, "mileage_km": "85000",
 		"fuel": "petrol", "engine_volume": 2.5, "options": []any{"abs", "abs"}, "vin": "jtnb11hk103456789"}
-	out, errs := validateAttributes(carSchema, testRefs, raw)
+	out, errs := validateAttributes(carSchema, testRefs, raw, i18n.RU)
 	if len(errs) != 0 {
 		t.Fatalf("unexpected errors: %v", errs)
 	}
@@ -46,21 +52,32 @@ func TestValidateOK(t *testing.T) {
 	if out["vin"] != "JTNB11HK103456789" {
 		t.Errorf("vin not uppercased: %v", out["vin"])
 	}
-	d := derive(carSchema, testRefs, out, "Алматы")
-	if d.Title != "Toyota Camry, 2018" {
-		t.Errorf("title = %q", d.Title)
+	schemas := map[i18n.Lang]*clients.Schema{}
+	for _, l := range i18n.All {
+		schemas[l] = carSchema
 	}
-	if d.Labels["mileage_km"] != "85 000 км" || d.Labels["year"] != "2018" || d.Labels["engine_volume"] != "2,5 л" {
-		t.Errorf("labels = %#v", d.Labels)
+	city := clients.RefItem{ID: "praha", Names: map[string]string{"ru": "Прага", "uk": "Прага", "cs": "Praha", "en": "Prague"}}
+	d := derive(schemas, testRefs, out, city)
+	ru := d.I18n["ru"]
+	if ru.Title != "Toyota Camry, 2018" {
+		t.Errorf("title = %q", ru.Title)
 	}
-	if len(d.Highlights) != 3 {
-		t.Errorf("highlights = %v", d.Highlights)
+	if ru.Labels["mileage_km"] != "85 000 км" || ru.Labels["year"] != "2018" || ru.Labels["engine_volume"] != "2,5 л" {
+		t.Errorf("labels = %#v", ru.Labels)
+	}
+	if len(ru.Highlights) != 3 || len(d.I18n) != len(i18n.All) {
+		t.Errorf("highlights = %v, langs = %d", ru.Highlights, len(d.I18n))
+	}
+	for _, w := range []string{"Прага", "Praha", "Prague", "камри"} {
+		if !strings.Contains(d.SearchText, w) {
+			t.Errorf("search text lacks %q: %q", w, d.SearchText)
+		}
 	}
 }
 
 func TestValidateErrors(t *testing.T) {
 	raw := map[string]any{"make": "bmw", "model": "toyota-camry", "year": 1900.0, "fuel": "electric", "engine_volume": 2.0, "junk": 1.0}
-	out, errs := validateAttributes(carSchema, testRefs, raw)
+	out, errs := validateAttributes(carSchema, testRefs, raw, i18n.RU)
 	for _, k := range []string{"attributes.model", "attributes.year", "attributes.mileage_km", "attributes.junk"} {
 		if errs[k] == "" {
 			t.Errorf("expected error for %s, got %v", k, errs)
@@ -75,13 +92,14 @@ func TestValidateErrors(t *testing.T) {
 }
 
 func TestComputedApartments(t *testing.T) {
-	a := map[string]any{"deal_type": "sale", "rooms": "2", "floor": int64(1), "floors_total": int64(9), "area_total": 50.0}
-	addComputed("apartments", a, 25_000_000)
-	if a["not_first_floor"] != false || a["not_last_floor"] != true || a["price_per_m2"] != int64(500000) || a["floor_label"] != "1/9 эт." {
+	a := map[string]any{"deal_type": "sale", "layout": "2kk", "floor": int64(1), "floors_total": int64(9), "area_total": 50.0}
+	addComputed("apartments", a, 5_000_000)
+	if a["not_first_floor"] != false || a["not_last_floor"] != true || a["price_per_m2"] != int64(100000) || a["floor_label"] != "1/9" {
 		t.Errorf("computed = %#v", a)
 	}
-	labels := map[string]string{"area_total": "50 м²", "floor_label": "1/9 эт."}
-	if got := makeTitle("apartments", labels, a); got != "2-комн. квартира, 50 м², 1/9 эт." {
+	fl := labelFor(clients.Attribute{Key: "floor_label", Type: "text"}, a["floor_label"], nil, i18n.RU)
+	labels := map[string]string{"layout": "2+kk", "area_total": "50 м²", "floor_label": fl}
+	if got := makeTitle("apartments", labels, i18n.RU); got != "Квартира 2+kk, 50 м², 1/9 эт." {
 		t.Errorf("title = %q", got)
 	}
 }

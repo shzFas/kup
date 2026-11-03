@@ -15,6 +15,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+
+	"kup/pkg/i18n"
 )
 
 // UserHeader is set by the gateway after verifying the JWT. Services trust it
@@ -30,10 +32,18 @@ type ErrorBody struct {
 	Fields  map[string]string `json:"fields,omitempty"`
 }
 
-// Error is an error that maps to an HTTP response.
+// Error is an error that maps to an HTTP response. When Key is set, the
+// message is translated into the request language when the response is written.
 type Error struct {
 	Status int
 	Body   ErrorBody
+	Key    string
+	Args   []any
+}
+
+// Err builds an error whose message is the i18n key (see pkg/i18n).
+func Err(status int, code, key string, args ...any) *Error {
+	return &Error{Status: status, Body: ErrorBody{Error: code}, Key: key, Args: args}
 }
 
 func (e *Error) Error() string { return e.Body.Error + ": " + e.Body.Message }
@@ -43,11 +53,13 @@ func NewError(status int, code, msg string) *Error {
 }
 
 func BadRequest(msg string) *Error { return NewError(400, "bad_request", msg) }
-func NotFound() *Error             { return NewError(404, "not_found", "Не найдено") }
-func Forbidden() *Error            { return NewError(403, "forbidden", "Нет доступа") }
-func Unauthorized() *Error         { return NewError(401, "unauthorized", "Требуется вход") }
+func NotFound() *Error             { return Err(404, "not_found", "not_found") }
+func Forbidden() *Error            { return Err(403, "forbidden", "forbidden") }
+func Unauthorized() *Error         { return Err(401, "unauthorized", "unauthorized") }
+
+// Validation reports per-field errors; field messages must already be localized.
 func Validation(fields map[string]string) *Error {
-	return &Error{Status: 400, Body: ErrorBody{Error: "validation_failed", Message: "Проверьте заполнение полей", Fields: fields}}
+	return &Error{Status: 400, Body: ErrorBody{Error: "validation_failed", Fields: fields}, Key: "check_fields"}
 }
 
 func JSON(w http.ResponseWriter, status int, v any) {
@@ -62,11 +74,15 @@ func JSON(w http.ResponseWriter, status int, v any) {
 func Fail(w http.ResponseWriter, r *http.Request, err error) {
 	var he *Error
 	if errors.As(err, &he) {
-		JSON(w, he.Status, he.Body)
+		body := he.Body
+		if he.Key != "" {
+			body.Message = i18n.T(i18n.FromRequest(r), he.Key, he.Args...)
+		}
+		JSON(w, he.Status, body)
 		return
 	}
 	slog.Error("request failed", "path", r.URL.Path, "err", err, "req_id", middleware.GetReqID(r.Context()))
-	JSON(w, 500, ErrorBody{Error: "internal", Message: "Внутренняя ошибка, попробуйте позже"})
+	JSON(w, 500, ErrorBody{Error: "internal", Message: i18n.T(i18n.FromRequest(r), "internal")})
 }
 
 // Handler lets handlers return errors instead of writing them.
@@ -83,7 +99,7 @@ func Decode(r *http.Request, v any) error {
 	dec := json.NewDecoder(http.MaxBytesReader(nil, r.Body, 1<<20))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(v); err != nil {
-		return BadRequest("Некорректный JSON: " + err.Error())
+		return &Error{Status: 400, Body: ErrorBody{Error: "bad_request", Message: err.Error()}}
 	}
 	return nil
 }

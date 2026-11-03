@@ -51,6 +51,7 @@ type Attribute struct {
 	Unit      *string    `json:"unit"`
 	DependsOn *DependsOn `json:"depends_on"`
 	Computed  bool       `json:"computed"`
+	Hint      *string    `json:"hint"`
 }
 
 type Filter struct {
@@ -70,14 +71,29 @@ type Filter struct {
 	Pinned    bool       `json:"pinned"`
 	Facet     bool       `json:"facet"`
 	DependsOn *DependsOn `json:"depends_on"`
+	Hint      *string    `json:"hint"`
 }
 
-// RefItem is a dictionary entry (make, model, city...).
+// RefItem is a dictionary entry (make, model, city...) with names in every language.
 type RefItem struct {
-	ID      string   `json:"id"`
-	Name    string   `json:"name"`
-	Parent  *string  `json:"parent"`
-	Aliases []string `json:"aliases,omitempty"`
+	ID      string            `json:"id"`
+	Names   map[string]string `json:"names"`
+	Parent  *string           `json:"parent"`
+	Aliases []string          `json:"aliases,omitempty"`
+}
+
+// Name returns the entry name in lang (falls back to English, then any).
+func (r RefItem) Name(lang string) string {
+	if v := r.Names[lang]; v != "" {
+		return v
+	}
+	if v := r.Names["en"]; v != "" {
+		return v
+	}
+	for _, v := range r.Names {
+		return v
+	}
+	return r.ID
 }
 
 // Catalog fetches schemas and refs from the catalog service and caches them.
@@ -102,7 +118,14 @@ func NewCatalog(base string) *Catalog {
 }
 
 func (c *Catalog) get(ctx context.Context, path string, v any) error {
+	return c.getLang(ctx, path, "", v)
+}
+
+func (c *Catalog) getLang(ctx context.Context, path, lang string, v any) error {
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, c.base+path, nil)
+	if lang != "" {
+		req.Header.Set("Accept-Language", lang)
+	}
 	res, err := c.http.Do(req)
 	if err != nil {
 		return err
@@ -119,20 +142,21 @@ func (c *Catalog) get(ctx context.Context, path string, v any) error {
 
 var ErrNotFound = fmt.Errorf("not found")
 
-// Schema returns the category schema; ErrNotFound for unknown categories.
-func (c *Catalog) Schema(ctx context.Context, slug string) (*Schema, error) {
+// Schema returns the category schema in lang; ErrNotFound for unknown categories.
+func (c *Catalog) Schema(ctx context.Context, slug, lang string) (*Schema, error) {
+	key := slug + "|" + lang
 	c.mu.Lock()
-	if s, ok := c.schemas[slug]; ok && time.Since(s.at) < c.ttl {
+	if s, ok := c.schemas[key]; ok && time.Since(s.at) < c.ttl {
 		c.mu.Unlock()
 		return s.v, nil
 	}
 	c.mu.Unlock()
 	var s Schema
-	if err := c.get(ctx, "/v1/categories/"+slug+"/schema", &s); err != nil {
+	if err := c.getLang(ctx, "/v1/categories/"+slug+"/schema", lang, &s); err != nil {
 		return nil, err
 	}
 	c.mu.Lock()
-	c.schemas[slug] = cached[*Schema]{&s, time.Now()}
+	c.schemas[key] = cached[*Schema]{&s, time.Now()}
 	c.mu.Unlock()
 	return &s, nil
 }
