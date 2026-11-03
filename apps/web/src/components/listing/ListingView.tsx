@@ -1,3 +1,4 @@
+"use client";
 import Link from "next/link";
 import { formatPrice, type CategorySchema, type Listing, type ListingCard } from "@kup/shared";
 import { memberSince, relativeDate } from "@/lib/format";
@@ -8,16 +9,20 @@ import { PriceHistory } from "./PriceHistory";
 import { SimilarListings } from "./SimilarListings";
 import { ContactSellerButton, ReportButton } from "./ContactActions";
 import { FavoriteButton } from "../FavoriteButton";
-import { IconEye, IconPin } from "../icons";
+import { IconEye, IconLanguage, IconPin } from "../icons";
+import { useI18n } from "@/i18n/client";
+import type { MsgKey } from "@/i18n/core";
 
 /** Characteristics grouped by schema groups, only attributes that have a label value. */
-export function characteristics(listing: Listing, schema: CategorySchema | null) {
-  const labels = listing.attribute_labels ?? {};
+export function characteristics(listing: Listing, schema: CategorySchema | null, labels_: { all: string; other: string }) {
+  const labels = { ...(listing.attribute_labels ?? {}) };
+  // Shown separately next to the contact buttons.
+  delete labels[SELLER_LANGS];
   if (!schema) {
-    return [{ key: "all", label: "Характеристики", rows: Object.entries(labels).map(([k, v]) => ({ key: k, label: k, value: v })) }];
+    return [{ key: "all", label: labels_.all, rows: Object.entries(labels).map(([k, v]) => ({ key: k, label: k, value: v })) }];
   }
   const groups = schema.groups.map((g) => ({ key: g.key, label: g.label, rows: [] as { key: string; label: string; value: string }[] }));
-  const other = { key: "_other", label: "Прочее", rows: [] as { key: string; label: string; value: string }[] };
+  const other = { key: "_other", label: labels_.other, rows: [] as { key: string; label: string; value: string }[] };
   for (const a of schema.attributes) {
     const v = labels[a.key];
     if (v == null || v === "") continue;
@@ -26,12 +31,14 @@ export function characteristics(listing: Listing, schema: CategorySchema | null)
   return [...groups, other].filter((g) => g.rows.length > 0);
 }
 
-const STATUS_NOTE: Record<Listing["status"], string | null> = {
+const SELLER_LANGS = "seller_langs";
+
+const STATUS_NOTE: Record<Listing["status"], MsgKey | null> = {
   active: null,
-  archived: "Объявление снято с публикации",
-  sold: "Продано",
-  expired: "Срок размещения объявления истёк",
-  blocked: "Объявление заблокировано модератором",
+  archived: "listing.note.archived",
+  sold: "listing.note.sold",
+  expired: "listing.note.expired",
+  blocked: "listing.note.blocked",
 };
 
 export function ListingView({
@@ -45,20 +52,25 @@ export function ListingView({
   similar?: ListingCard[] | null;
   onOwnerChanged?: (s: Listing["status"] | "deleted") => void;
 }) {
-  const groups = characteristics(listing, schema);
+  const { t, lang } = useI18n();
+  const groups = characteristics(listing, schema, { all: t("listing.specs"), other: t("filters.other") });
+  const sellerLangs = listing.attribute_labels?.[SELLER_LANGS];
+  const note = STATUS_NOTE[listing.status];
   const price = formatPrice(listing.price, listing.currency, listing.price_suffix);
   return (
     <div className="mx-auto max-w-7xl px-4 py-5 sm:py-6">
-      <nav className="text-sm text-gray-500 mb-3 truncate" aria-label="Хлебные крошки">
-        <Link href="/" className="hover:text-accent-600">Главная</Link>
+      <nav className="text-sm text-gray-500 mb-3 truncate" aria-label={t("common.breadcrumbs")}>
+        <Link href="/" className="hover:text-accent-600">{t("common.home")}</Link>
         <span className="mx-1.5">/</span>
-        <Link href={`/s/${listing.category}`} className="hover:text-accent-600">{schema?.name ?? "Объявления"}</Link>
+        <Link href={`/s/${listing.category}`} className="hover:text-accent-600">{schema?.name ?? t("common.listings")}</Link>
         <span className="mx-1.5">/</span>
         <span className="text-gray-700">{listing.title}</span>
       </nav>
 
-      {STATUS_NOTE[listing.status] && (
-        <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">{STATUS_NOTE[listing.status]}</div>
+      {note && (
+        <div className={`mb-4 rounded-xl px-4 py-3 text-sm border ${listing.status === "blocked" ? "bg-red-50 border-red-200 text-red-800" : "bg-amber-50 border-amber-200 text-amber-800"}`}>
+          {t(note)}
+        </div>
       )}
 
       <div className="grid lg:grid-cols-[minmax(0,1fr)_360px] gap-6 items-start">
@@ -81,7 +93,7 @@ export function ListingView({
 
           {groups.length > 0 && (
             <section className="mt-6 card p-5">
-              <h2 className="text-lg font-semibold">Характеристики</h2>
+              <h2 className="text-lg font-semibold">{t("listing.specs")}</h2>
               <div className="mt-2 space-y-5">
                 {groups.map((g) => (
                   <div key={g.key}>
@@ -107,11 +119,11 @@ export function ListingView({
           )}
 
           <section className="mt-6 card p-5">
-            <h2 className="text-lg font-semibold">Описание</h2>
+            <h2 className="text-lg font-semibold">{t("listing.description")}</h2>
             {listing.description ? (
               <p className="mt-2 whitespace-pre-line break-words text-[15px] leading-relaxed text-gray-800">{listing.description}</p>
             ) : (
-              <p className="mt-2 text-gray-400">Продавец не добавил описание</p>
+              <p className="mt-2 text-gray-400">{t("listing.noDescription")}</p>
             )}
           </section>
         </div>
@@ -126,9 +138,17 @@ export function ListingView({
               <IconPin size={16} /> {listing.city?.name}
             </div>
             <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-gray-500">
-              <span suppressHydrationWarning>Опубликовано {relativeDate(listing.published_at)}</span>
+              <span suppressHydrationWarning>{t("listing.published", { date: relativeDate(listing.published_at, lang) })}</span>
               <span className="inline-flex items-center gap-1"><IconEye size={14} /> {listing.views}</span>
             </div>
+            {sellerLangs && (
+              <div className="mt-4 flex items-start gap-2 rounded-xl bg-accent-50 px-3 py-2.5 text-sm text-accent-700">
+                <IconLanguage size={18} className="shrink-0 mt-px" />
+                <span>
+                  {t("listing.sellerSpeaks")} <b className="font-semibold">{sellerLangs}</b>
+                </span>
+              </div>
+            )}
             <div className="mt-4 space-y-2">
               <PhoneButton id={listing.id} />
               <ContactSellerButton listingId={listing.id} sellerId={listing.seller?.id} isOwner={listing.is_owner} status={listing.status} />
@@ -138,11 +158,11 @@ export function ListingView({
 
           <div className="card p-5 flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-accent-100 text-accent-700 font-semibold flex items-center justify-center text-lg shrink-0">
-              {(listing.seller?.name || "П").slice(0, 1).toUpperCase()}
+              {(listing.seller?.name || "?").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0">
-              <div className="font-semibold truncate">{listing.seller?.name || "Частное лицо"}</div>
-              {listing.seller?.member_since && <div className="text-sm text-gray-500">{memberSince(listing.seller.member_since)}</div>}
+              <div className="font-semibold truncate">{listing.seller?.name || t("common.privatePerson")}</div>
+              {listing.seller?.member_since && <div className="text-sm text-gray-500">{memberSince(listing.seller.member_since, lang)}</div>}
             </div>
           </div>
 

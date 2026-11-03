@@ -8,8 +8,10 @@ import { useEvents } from "@/lib/events";
 import { errorMessage } from "@/lib/errors";
 import { Modal } from "../Modal";
 import { IconChat, IconFlag } from "../icons";
+import { useI18n } from "@/i18n/client";
+import type { MsgKey } from "@/i18n/core";
 
-const TEMPLATES = ["Здравствуйте! Ещё актуально?", "Торг возможен?", "Когда можно посмотреть?"];
+const TEMPLATES: MsgKey[] = ["chat.tpl.available", "chat.tpl.bargain", "chat.tpl.view"];
 
 function useIsOwner(sellerId?: string, isOwner?: boolean) {
   const { user } = useAuth();
@@ -23,25 +25,27 @@ export function ContactSellerButton({ listingId, sellerId, isOwner, status }: { 
   const router = useRouter();
   const pathname = usePathname();
   const { upsertChat } = useEvents();
+  const { t, lang } = useI18n();
+  const templates = TEMPLATES.map((k) => t(k));
   const [open, setOpen] = useState(false);
-  const [text, setText] = useState(TEMPLATES[0]);
+  const [text, setText] = useState(templates[0]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   if (owner || status !== "active") return null;
 
   async function send() {
-    const t = text.trim();
-    if (!t) return;
+    const body = text.trim();
+    if (!body) return;
     setBusy(true);
     setError(null);
     try {
-      const chat = await api().startChat(listingId, t);
+      const chat = await api().startChat(listingId, body);
       upsertChat(chat);
       router.push(`/chats/${chat.id}`);
     } catch (e) {
-      if (e instanceof ApiError && e.status === 410) setError("Объявление больше не активно.");
-      else if (e instanceof ApiError && e.status === 400) setError(e.message || "Нельзя написать по этому объявлению.");
-      else setError(errorMessage(e));
+      if (e instanceof ApiError && e.status === 410) setError(t("chat.err.inactive"));
+      else if (e instanceof ApiError && e.status === 400) setError(e.message || t("chat.err.cannot"));
+      else setError(errorMessage(e, lang));
       setBusy(false);
     }
   }
@@ -53,22 +57,22 @@ export function ContactSellerButton({ listingId, sellerId, isOwner, status }: { 
         className="btn-secondary w-full !h-12 text-base"
         onClick={() => (user ? setOpen(true) : router.push(loginHref(pathname)))}
       >
-        <IconChat size={18} /> Написать продавцу
+        <IconChat size={18} /> {t("chat.writeSeller")}
       </button>
       {open && (
         <Modal
-          title="Сообщение продавцу"
+          title={t("chat.toSeller")}
           onClose={() => setOpen(false)}
           footer={
             <button type="button" className="btn-primary w-full !h-11" disabled={busy || !text.trim()} onClick={send}>
-              {busy ? "Отправляем…" : "Отправить"}
+              {busy ? t("common.sending") : t("common.send")}
             </button>
           }
         >
           <div className="flex flex-wrap gap-2">
-            {TEMPLATES.map((t) => (
-              <button key={t} type="button" onClick={() => setText(t)} className={`chip ${text === t ? "border-accent-500 bg-accent-50 text-accent-700" : "border-gray-200 bg-white hover:bg-gray-50"}`}>
-                {t}
+            {templates.map((tpl) => (
+              <button key={tpl} type="button" onClick={() => setText(tpl)} className={`chip ${text === tpl ? "border-accent-500 bg-accent-50 text-accent-700" : "border-gray-200 bg-white hover:bg-gray-50"}`}>
+                {tpl}
               </button>
             ))}
           </div>
@@ -83,8 +87,8 @@ export function ContactSellerButton({ listingId, sellerId, isOwner, status }: { 
                 void send();
               }
             }}
-            placeholder="Ваше сообщение"
-            aria-label="Сообщение"
+            placeholder={t("chat.yourMessage")}
+            aria-label={t("chat.message")}
             autoFocus
           />
           {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
@@ -101,6 +105,7 @@ export function ReportButton({ listingId, sellerId, isOwner }: { listingId: stri
   const router = useRouter();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const { t, lang } = useI18n();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [comment, setComment] = useState("");
   const [busy, setBusy] = useState(false);
@@ -116,7 +121,7 @@ export function ReportButton({ listingId, sellerId, isOwner }: { listingId: stri
       await api().report(listingId, reason, comment.trim());
       setDone(true);
     } catch (e) {
-      setError(errorMessage(e));
+      setError(errorMessage(e, lang));
     } finally {
       setBusy(false);
     }
@@ -129,35 +134,35 @@ export function ReportButton({ listingId, sellerId, isOwner }: { listingId: stri
         className="inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-red-600"
         onClick={() => (user ? setOpen(true) : router.push(loginHref(pathname)))}
       >
-        <IconFlag size={16} /> {done ? "Жалоба отправлена" : "Пожаловаться"}
+        <IconFlag size={16} /> {done ? t("report.sent") : t("report.button")}
       </button>
       {open && (
         <Modal
-          title="Пожаловаться на объявление"
+          title={t("report.title")}
           onClose={() => setOpen(false)}
           footer={
             done ? (
-              <button type="button" className="btn-secondary w-full !h-11" onClick={() => setOpen(false)}>Закрыть</button>
+              <button type="button" className="btn-secondary w-full !h-11" onClick={() => setOpen(false)}>{t("common.close")}</button>
             ) : (
               <button type="button" className="btn-primary w-full !h-11" disabled={busy || !reason} onClick={submit}>
-                {busy ? "Отправляем…" : "Отправить жалобу"}
+                {busy ? t("common.sending") : t("report.submit")}
               </button>
             )
           }
         >
           {done ? (
             <div className="py-6 text-center">
-              <div className="text-lg font-semibold">Спасибо, жалоба отправлена</div>
-              <p className="mt-1 text-sm text-gray-500">Модераторы проверят объявление.</p>
+              <div className="text-lg font-semibold">{t("report.thanks")}</div>
+              <p className="mt-1 text-sm text-gray-500">{t("report.thanksText")}</p>
             </div>
           ) : (
             <>
               <fieldset className="space-y-1">
-                <legend className="text-sm text-gray-600 mb-2">Что не так с объявлением?</legend>
+                <legend className="text-sm text-gray-600 mb-2">{t("report.question")}</legend>
                 {REPORT_REASONS.map((r) => (
                   <label key={r.value} className="flex items-center gap-3 rounded-lg px-2 py-2 hover:bg-gray-50 cursor-pointer">
                     <input type="radio" name="reason" value={r.value} checked={reason === r.value} onChange={() => setReason(r.value)} className="accent-accent-600 w-4 h-4" />
-                    <span className="text-sm">{r.label}</span>
+                    <span className="text-sm">{t(`report.reason.${r.value}` as MsgKey)}</span>
                   </label>
                 ))}
               </fieldset>
@@ -166,8 +171,8 @@ export function ReportButton({ listingId, sellerId, isOwner }: { listingId: stri
                 value={comment}
                 maxLength={1000}
                 onChange={(e) => setComment(e.target.value)}
-                placeholder="Комментарий (необязательно)"
-                aria-label="Комментарий"
+                placeholder={t("report.commentPlaceholder")}
+                aria-label={t("report.comment")}
               />
               {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
             </>

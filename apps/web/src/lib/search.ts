@@ -29,12 +29,13 @@ export function parseSearchState(query: RawQuery, schema: CategorySchema): Searc
   return { filters, q: (first(query.q) ?? "").trim(), sort, page };
 }
 
-export function searchHref(category: string, s: Partial<SearchState>): string {
+export function searchHref(category: string, s: Partial<SearchState> & { saved?: string }): string {
   const params = new URLSearchParams();
   if (s.q) params.set("q", s.q);
   for (const [k, v] of Object.entries(filtersToQuery(s.filters ?? {}))) params.set(k, v);
   if (s.sort) params.set("sort", s.sort);
   if (s.page && s.page > 1) params.set("page", String(s.page));
+  if (s.saved) params.set("saved", s.saved);
   const qs = params.toString().replace(/%2C/gi, ",");
   return `/s/${category}${qs ? "?" + qs : ""}`;
 }
@@ -54,9 +55,9 @@ export function withoutFilter(filters: Filters, key: string, defs: FilterDef[]):
 }
 
 /** Ordered groups for the filter panel: `common` first, then the schema order; unknown groups last. */
-export function groupFilters(schema: CategorySchema, defs: FilterDef[]) {
+export function groupFilters(schema: CategorySchema, defs: FilterDef[], labels: { common: string; other: string }) {
   const groups = [...schema.groups];
-  if (!groups.some((g) => g.key === "common")) groups.unshift({ key: "common", label: "Общее" });
+  if (!groups.some((g) => g.key === "common")) groups.unshift({ key: "common", label: labels.common });
   groups.sort((a, b) => (a.key === "common" ? -1 : b.key === "common" ? 1 : 0));
   const out: { key: string; label: string; filters: FilterDef[] }[] = groups.map((g) => ({ ...g, filters: [] }));
   const other: FilterDef[] = [];
@@ -65,6 +66,6 @@ export function groupFilters(schema: CategorySchema, defs: FilterDef[]) {
     if (g) g.filters.push(d);
     else other.push(d);
   }
-  if (other.length) out.push({ key: "_other", label: "Прочее", filters: other });
+  if (other.length) out.push({ key: "_other", label: labels.other, filters: other });
   return out.filter((g) => g.filters.length > 0);
 }

@@ -6,6 +6,7 @@ import { mediaUrl } from "@/lib/config";
 import { ListingView } from "@/components/listing/ListingView";
 import { ClientListing } from "@/components/listing/ClientListing";
 import { ErrorState } from "@/components/ListingCard";
+import { getI18n } from "@/i18n/server";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -18,14 +19,19 @@ async function load(id: string): Promise<Listing | "not_found" | "error"> {
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { id } = await params;
+  const [{ id }, { t, lang }] = await Promise.all([params, getI18n()]);
   const l = await load(id);
-  if (typeof l === "string") return { title: "Объявление", robots: { index: false } };
+  if (typeof l === "string") return { title: t("seo.listing"), robots: { index: false } };
   const price = formatPrice(l.price, l.currency, l.price_suffix);
-  const city = l.city?.name ? ` ${inCity(l.city.name)}` : "";
-  const desc = `${l.title} за ${price}${city}. ${l.highlights?.join(", ") ?? ""}. ${l.description?.slice(0, 120) ?? ""}`.trim();
+  const rent = !!l.price_suffix;
+  const verb = t(rent ? "seo.rent" : "seo.buy");
+  const where = l.city?.name ? inCity(l.city, lang) : "";
+  // "Škoda Octavia — купить в Праге", "Škoda Octavia — prodej Praha"
+  const desc = t("seo.listingDescription", { title: l.title, price, where, highlights: l.highlights?.join(", ") ?? "" })
+    .concat(l.description ? ` ${l.description.slice(0, 120)}` : "")
+    .trim();
   return {
-    title: `${l.title} — ${price}${city}`,
+    title: `${l.title} — ${verb}${where ? " " + where : ""} · ${price}`,
     description: desc,
     openGraph: { title: l.title, description: desc, images: l.photos?.[0] ? [mediaUrl(l.photos[0])] : undefined },
   };
@@ -38,13 +44,13 @@ export default async function ListingPage({ params }: Props) {
   if (l === "error") {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
-        <ErrorState text="Не удалось загрузить объявление. Попробуйте обновить страницу." />
+        <ErrorState text={(await getI18n()).t("listing.loadFailedText")} />
       </div>
     );
   }
   const [schema, similar] = await Promise.all([
     getSchema(l.category).catch(() => null),
-    serverApi().similar(l.id, 8).catch(() => null),
+    serverApi((await getI18n()).lang).similar(l.id, 8).catch(() => null),
   ]);
   return <ListingView listing={l} schema={schema} similar={similar} />;
 }

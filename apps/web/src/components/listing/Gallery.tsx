@@ -3,8 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { mediaUrl } from "@/lib/config";
 import { IconCamera, IconChevronLeft, IconChevronRight, IconExpand, IconX } from "../icons";
+import { useI18n } from "@/i18n/client";
 
 export function Gallery({ photos, title }: { photos: string[]; title: string }) {
+  const { t } = useI18n();
   const [idx, setIdx] = useState(0);
   const [full, setFull] = useState(false);
   const touchX = useRef<number | null>(null);
@@ -31,7 +33,7 @@ export function Gallery({ photos, title }: { photos: string[]; title: string }) 
     return (
       <div className="aspect-[4/3] rounded-2xl bg-gray-100 flex flex-col items-center justify-center text-gray-400">
         <IconCamera size={48} />
-        <span className="mt-2 text-sm">Нет фото</span>
+        <span className="mt-2 text-sm">{t("listing.noPhoto")}</span>
       </div>
     );
   }
@@ -49,10 +51,10 @@ export function Gallery({ photos, title }: { photos: string[]; title: string }) 
   const Arrows = ({ big }: { big?: boolean }) =>
     n > 1 ? (
       <>
-        <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label="Предыдущее фото" className={`absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 hover:bg-white shadow ${big ? "p-3" : "p-2"}`}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); go(-1); }} aria-label={t("gallery.prev")} className={`absolute left-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 hover:bg-white shadow ${big ? "p-3" : "p-2"}`}>
           <IconChevronLeft size={big ? 24 : 20} />
         </button>
-        <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label="Следующее фото" className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 hover:bg-white shadow ${big ? "p-3" : "p-2"}`}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); go(1); }} aria-label={t("gallery.next")} className={`absolute right-2 top-1/2 -translate-y-1/2 rounded-full bg-white/85 hover:bg-white shadow ${big ? "p-3" : "p-2"}`}>
           <IconChevronRight size={big ? 24 : 20} />
         </button>
       </>
@@ -61,27 +63,27 @@ export function Gallery({ photos, title }: { photos: string[]; title: string }) 
   return (
     <div>
       <div className="relative aspect-[4/3] rounded-2xl overflow-hidden bg-gray-900 select-none" {...swipe}>
-        <img src={mediaUrl(photos[idx])} alt={`${title} — фото ${idx + 1}`} className="w-full h-full object-contain cursor-zoom-in" onClick={() => setFull(true)} />
+        <img src={mediaUrl(photos[idx])} alt={`${title} — ${t("common.photo")} ${idx + 1}`} className="w-full h-full object-contain cursor-zoom-in" onClick={() => setFull(true)} />
         <Arrows />
         <span className="absolute bottom-2 left-2 rounded-md bg-black/60 px-2 py-0.5 text-xs text-white">{idx + 1} / {n}</span>
-        <button type="button" onClick={() => setFull(true)} aria-label="На весь экран" className="absolute bottom-2 right-2 rounded-lg bg-black/60 p-1.5 text-white">
+        <button type="button" onClick={() => setFull(true)} aria-label={t("gallery.fullscreen")} className="absolute bottom-2 right-2 rounded-lg bg-black/60 p-1.5 text-white">
           <IconExpand size={18} />
         </button>
       </div>
       {n > 1 && (
         <div className="mt-2 flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {photos.map((p, i) => (
-            <button key={p + i} type="button" onClick={() => setIdx(i)} aria-label={`Фото ${i + 1}`} className={`shrink-0 w-20 h-15 sm:w-24 sm:h-18 rounded-lg overflow-hidden border-2 ${i === idx ? "border-accent-600" : "border-transparent opacity-75 hover:opacity-100"}`}>
+            <button key={p + i} type="button" onClick={() => setIdx(i)} aria-label={`${t("common.photo")} ${i + 1}`} className={`shrink-0 w-20 h-15 sm:w-24 sm:h-18 rounded-lg overflow-hidden border-2 ${i === idx ? "border-accent-600" : "border-transparent opacity-75 hover:opacity-100"}`}>
               <img src={mediaUrl(p)} alt="" className="w-full h-full object-cover" loading="lazy" />
             </button>
           ))}
         </div>
       )}
       {full && (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" role="dialog" aria-modal="true" aria-label="Просмотр фото" onClick={() => setFull(false)} {...swipe}>
-          <img src={mediaUrl(photos[idx])} alt={`${title} — фото ${idx + 1}`} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
+        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center" role="dialog" aria-modal="true" aria-label={t("gallery.viewer")} onClick={() => setFull(false)} {...swipe}>
+          <img src={mediaUrl(photos[idx])} alt={`${title} — ${t("common.photo")} ${idx + 1}`} className="max-w-full max-h-full object-contain" onClick={(e) => e.stopPropagation()} />
           <Arrows big />
-          <button type="button" onClick={() => setFull(false)} aria-label="Закрыть" className="absolute top-3 right-3 rounded-full bg-white/15 p-2 text-white hover:bg-white/25">
+          <button type="button" onClick={() => setFull(false)} aria-label={t("common.close")} className="absolute top-3 right-3 rounded-full bg-white/15 p-2 text-white hover:bg-white/25">
             <IconX size={24} />
           </button>
           <span className="absolute top-4 left-4 text-sm text-white/80">{idx + 1} / {n}</span>

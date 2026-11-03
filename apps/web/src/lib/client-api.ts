@@ -1,6 +1,7 @@
 "use client";
 import { createApi, type Api, type TokenStore } from "@kup/shared";
 import { PUBLIC_API_URL } from "./config";
+import { getClientLang } from "@/i18n/client";
 
 const TOKENS_KEY = "kup.tokens";
 
@@ -41,6 +42,7 @@ export function api(): Api {
       baseUrl: PUBLIC_API_URL,
       tokens: tokenStore,
       onLogout: () => listeners.forEach((l) => l(null)),
+      lang: getClientLang,
     });
   }
   return instance;

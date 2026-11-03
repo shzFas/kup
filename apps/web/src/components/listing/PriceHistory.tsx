@@ -1,9 +1,12 @@
+"use client";
 import { formatPrice } from "@kup/shared";
-import { formatDate } from "@/lib/status";
+import { formatDate } from "@/lib/format";
+import { useI18n } from "@/i18n/client";
 import { IconTrendDown } from "../icons";
 
 /** Inline SVG step chart of the price history (oldest → newest). Renders nothing for < 2 points. */
 export function PriceHistory({ history, currency, suffix = "" }: { history: { price: number; at: string }[]; currency: string; suffix?: string }) {
+  const { t, lang } = useI18n();
   const pts = [...(history ?? [])].filter((p) => Number.isFinite(p.price)).sort((a, b) => a.at.localeCompare(b.at));
   if (pts.length < 2) return null;
   const W = 320, H = 96, PX = 8, PT = 10, PB = 10;
@@ -29,19 +32,20 @@ export function PriceHistory({ history, currency, suffix = "" }: { history: { pr
   return (
     <section className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-lg font-semibold">История цены</h2>
+        <h2 className="text-lg font-semibold">{t("price.history")}</h2>
         {drop > 0 && (
           <span className="inline-flex items-center gap-1 rounded-lg bg-green-50 text-green-700 border border-green-200 px-2 py-1 text-sm font-medium">
-            <IconTrendDown size={16} /> Цена снижена на {fmt(drop)}
+            <IconTrendDown size={16} /> {t("price.dropped", { amount: fmt(drop) })}
           </span>
         )}
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full h-24 text-accent-600" role="img" aria-label={`Цена изменилась с ${fmt(first)} до ${fmt(last)}`}>
-        <line x1={PX} x2={W - PX} y1={y(lo)} y2={y(lo)} stroke="#e5e7eb" strokeDasharray="3 3" />
-        <line x1={PX} x2={W - PX} y1={y(hi)} y2={y(hi)} stroke="#e5e7eb" strokeDasharray="3 3" />
+      <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full h-24 text-accent-600" preserveAspectRatio="none" role="img" aria-label={t("price.chartLabel", { from: fmt(first), to: fmt(last) })}>
+        <line x1={PX} x2={W - PX} y1={y(lo)} y2={y(lo)} stroke="#e5e7eb" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
+        <line x1={PX} x2={W - PX} y1={y(hi)} y2={y(hi)} stroke="#e5e7eb" strokeDasharray="3 3" vectorEffect="non-scaling-stroke" />
         <path d={d} fill="none" stroke="currentColor" strokeWidth={2} strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
         {pts.map((p, i) => (
-          <circle key={i} cx={x(new Date(p.at).getTime())} cy={y(p.price)} r={3} fill="white" stroke="currentColor" strokeWidth={2} vectorEffect="non-scaling-stroke" />
+          // zero-length round-capped line = a dot that stays round when the SVG is stretched
+          <line key={i} x1={x(new Date(p.at).getTime())} x2={x(new Date(p.at).getTime())} y1={y(p.price)} y2={y(p.price)} stroke="currentColor" strokeWidth={8} strokeLinecap="round" vectorEffect="non-scaling-stroke" />
         ))}
       </svg>
       <ol className="mt-2 space-y-1 text-sm">
@@ -50,7 +54,7 @@ export function PriceHistory({ history, currency, suffix = "" }: { history: { pr
           const diff = prev ? p.price - prev.price : 0;
           return (
             <li key={p.at + i} className="flex justify-between gap-4 py-1 border-b border-dashed border-gray-100 last:border-0">
-              <span className="text-gray-500" suppressHydrationWarning>{formatDate(p.at)}</span>
+              <span className="text-gray-500" suppressHydrationWarning>{formatDate(p.at, lang)}</span>
               <span className="font-medium">
                 {fmt(p.price)}
                 {diff !== 0 && <span className={`ml-2 text-xs ${diff < 0 ? "text-green-600" : "text-red-600"}`}>{diff < 0 ? "−" : "+"}{fmt(Math.abs(diff))}</span>}

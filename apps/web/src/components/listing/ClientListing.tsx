@@ -7,10 +7,12 @@ import { useAuth } from "@/lib/auth";
 import { ListingView } from "./ListingView";
 import { EmptyState } from "../ListingCard";
 import Link from "next/link";
+import { useI18n } from "@/i18n/client";
 
 /** Fallback when SSR (anonymous) got 404 — e.g. the owner viewing an archived listing. */
 export function ClientListing({ id }: { id: string }) {
   const { user, loading } = useAuth();
+  const { t } = useI18n();
   const router = useRouter();
   const [data, setData] = useState<{ listing: Listing; schema: CategorySchema | null } | null>(null);
   const [state, setState] = useState<"loading" | "not_found" | "error" | "ok">("loading");
@@ -47,9 +49,9 @@ export function ClientListing({ id }: { id: string }) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
         <EmptyState
-          title={state === "error" ? "Не удалось загрузить объявление" : "Объявление не найдено"}
-          text={state === "error" ? "Попробуйте обновить страницу." : "Возможно, оно удалено или снято с публикации."}
-          action={<Link href="/" className="btn-primary">На главную</Link>}
+          title={state === "error" ? t("listing.loadFailed") : t("listing.notFound")}
+          text={state === "error" ? t("err.pageText") : t("listing.notFoundText")}
+          action={<Link href="/" className="btn-primary">{t("common.toHome")}</Link>}
         />
       </div>
     );

@@ -18,6 +18,9 @@ import { CategoryIcon } from "../icons";
 import { Segmented, Switch } from "../filters/widgets";
 import { RefSelect } from "./RefSelect";
 import { PhotoUploader, type PhotoItem } from "./PhotoUploader";
+import { FieldHint } from "../Hint";
+import { useI18n } from "@/i18n/client";
+import type { Translator } from "@/i18n/core";
 
 type Values = Record<string, AttrValue | undefined>;
 
@@ -43,6 +46,8 @@ function parseNumber(v: AttrValue | undefined, decimal: boolean): number | undef
 
 export function ListingForm({ categories, listing, initialCategory }: { categories: Category[]; listing?: Listing; initialCategory?: string }) {
   const router = useRouter();
+  const i18n = useI18n();
+  const { t, lang } = i18n;
   const editing = !!listing;
   const [category, setCategory] = useState<string | null>(listing?.category ?? (categories.some((c) => c.slug === initialCategory) ? initialCategory! : null));
   const [schema, setSchema] = useState<CategorySchema | null>(null);
@@ -97,12 +102,12 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
   const groups = useMemo(() => {
     if (!schema) return [];
     const gs = schema.groups.map((g) => ({ ...g, attrs: [] as Attribute[] }));
-    const other = { key: "_other", label: "Прочее", attrs: [] as Attribute[] };
+    const other = { key: "_other", label: t("filters.other"), attrs: [] as Attribute[] };
     for (const a of visible) (gs.find((g) => g.key === a.group) ?? other).attrs.push(a);
     return [...gs, other]
       .filter((g) => g.attrs.length)
       .map((g) => ({ ...g, attrs: [...g.attrs.filter((a) => a.required), ...g.attrs.filter((a) => !a.required)] }));
-  }, [schema, visible]);
+  }, [schema, visible, t]);
 
   function setValue(key: string, v: AttrValue | undefined) {
     setValues((prev) => {
@@ -141,9 +146,9 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
         case "decimal": {
           const n = parseNumber(v, a.type === "decimal");
           if (n === undefined) break;
-          if (Number.isNaN(n)) { errs[ek] = "Введите число"; break; }
-          if (a.min != null && n < a.min) { errs[ek] = `Не меньше ${formatNumber(a.min)}`; break; }
-          if (a.max != null && n > a.max) { errs[ek] = `Не больше ${formatNumber(a.max)}`; break; }
+          if (Number.isNaN(n)) { errs[ek] = t("form.err.number"); break; }
+          if (a.min != null && n < a.min) { errs[ek] = t("form.err.min", { n: formatNumber(a.min) }); break; }
+          if (a.max != null && n > a.max) { errs[ek] = t("form.err.max", { n: formatNumber(a.max) }); break; }
           out[a.key] = n;
           break;
         }
@@ -159,7 +164,7 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
         default:
           if (typeof v === "string" && v) out[a.key] = v;
       }
-      if (a.required && a.type !== "bool" && !(a.key in out) && !errs[ek]) errs[ek] = "Обязательное поле";
+      if (a.required && a.type !== "bool" && !(a.key in out) && !errs[ek]) errs[ek] = t("form.err.required");
     }
     return out;
   }
@@ -171,19 +176,19 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
     const errs: Record<string, string> = {};
     const attributes = buildAttributes(errs);
     const priceNum = Number(digitsOnly(price));
-    if (!digitsOnly(price)) errs.price = "Укажите цену";
-    if (!city) errs.city = "Выберите город";
-    if (photos.some((p) => p.uploading)) errs.photos = "Дождитесь окончания загрузки фото";
+    if (!digitsOnly(price)) errs.price = t("form.err.price");
+    if (!city) errs.city = t("form.err.city");
+    if (photos.some((p) => p.uploading)) errs.photos = t("form.err.photosUploading");
     if (Object.keys(errs).length) {
       setErrors(errs);
-      setFormError("Проверьте выделенные поля");
+      setFormError(t("form.err.check"));
       scrollToFirstError(errs);
       return;
     }
     const input: ListingInput = {
       category,
       price: priceNum,
-      currency: "KZT",
+      currency: "CZK",
       city: city!,
       description: description.trim(),
       photos: photos.filter((p) => p.id && !p.error).map((p) => p.id!),
@@ -204,10 +209,10 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
       setSubmitting(false);
       if (err instanceof ApiError && err.fields) {
         setErrors(err.fields);
-        setFormError(err.message || "Проверьте выделенные поля");
+        setFormError(err.message || t("form.err.check"));
         scrollToFirstError(err.fields);
       } else {
-        setFormError(errorMessage(err));
+        setFormError(errorMessage(err, lang));
       }
     }
   }
@@ -216,8 +221,8 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
   if (!category) {
     return (
       <div>
-        <h1 className="text-2xl sm:text-3xl font-bold">Новое объявление</h1>
-        <p className="mt-1 text-gray-600">Шаг 1 — выберите категорию</p>
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("form.newTitle")}</h1>
+        <p className="mt-1 text-gray-600">{t("form.step1")}</p>
         <div className="mt-6 grid grid-cols-2 gap-3">
           {categories.map((c) => (
             <button key={c.slug} type="button" onClick={() => setCategory(c.slug)} className="card p-5 flex flex-col items-start gap-3 hover:border-accent-300 hover:shadow-md transition text-left">
@@ -236,19 +241,19 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
     <form onSubmit={submit} noValidate>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold">{editing ? "Редактирование" : "Новое объявление"}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{editing ? t("form.editTitle") : t("form.newTitle")}</h1>
           <p className="mt-1 text-gray-600">
-            Категория: <b className="text-gray-900">{catName}</b>
+            {t("form.category")}: <b className="text-gray-900">{catName}</b>
             {!editing && (
               <button type="button" className="ml-2 text-accent-600 hover:underline text-sm" onClick={() => { setCategory(null); setErrors({}); }}>
-                изменить
+                {t("form.change")}
               </button>
             )}
           </p>
         </div>
       </div>
 
-      {schemaError && <div className="mt-6 card p-6 text-red-700">Не удалось загрузить форму. Обновите страницу.</div>}
+      {schemaError && <div className="mt-6 card p-6 text-red-700">{t("form.loadFailed")}</div>}
       {!schema && !schemaError && (
         <div className="mt-6 space-y-4">
           {[0, 1, 2].map((i) => <div key={i} className="skeleton h-40 rounded-2xl" />)}
@@ -269,25 +274,26 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
                     parentLabel={a.parent ? schema.attributes.find((x) => x.key === a.parent)?.label : undefined}
                     error={errors[`attributes.${a.key}`]}
                     onChange={(v) => setValue(a.key, v)}
+                    i18n={i18n}
                   />
                 ))}
               </div>
             </Section>
           ))}
 
-          <Section title="Фотографии">
+          <Section title={t("form.photos")}>
             <div id="field-photos">
               <PhotoUploader photos={photos} onChange={(fn) => setPhotos(fn)} error={errors.photos} />
             </div>
           </Section>
 
-          <Section title="Цена и место">
+          <Section title={t("form.priceAndPlace")}>
             <div className="grid sm:grid-cols-2 gap-x-5 gap-y-4">
-              <Field label="Цена" required error={errors.price} htmlFor="field-price">
+              <Field label={t("form.price")} required error={errors.price} htmlFor="field-price" hint={t("form.priceHint")}>
                 <div className="relative">
                   <input
                     id="field-price"
-                    className={`input pr-10 ${errors.price ? "!border-red-400" : ""}`}
+                    className={`input pr-12 ${errors.price ? "!border-red-400" : ""}`}
                     inputMode="numeric"
                     value={price}
                     onChange={(e) => {
@@ -296,11 +302,12 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
                       setErrors((x) => ({ ...x, price: "" }));
                     }}
                     placeholder="0"
+                    aria-describedby="field-price-hint"
                   />
-                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">₸</span>
+                  <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">Kč</span>
                 </div>
               </Field>
-              <Field label="Город" required error={errors.city} htmlFor="field-city">
+              <Field label={t("form.city")} required error={errors.city} htmlFor="field-city">
                 <RefSelect
                   id="field-city"
                   refName="city"
@@ -310,14 +317,14 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
                     setCity(v);
                     setErrors((x) => ({ ...x, city: "" }));
                   }}
-                  placeholder="Выберите город"
+                  placeholder={t("form.chooseCity")}
                   invalid={!!errors.city}
                 />
               </Field>
             </div>
           </Section>
 
-          <Section title="Описание">
+          <Section title={t("listing.description")}>
             <Field label="" error={errors.description} htmlFor="field-description">
               <textarea
                 id="field-description"
@@ -325,9 +332,13 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 maxLength={5000}
-                placeholder="Расскажите о состоянии, истории обслуживания, особенностях…"
+                placeholder={t("form.descriptionPlaceholder")}
+                aria-describedby="field-description-hint"
               />
-              <div className="mt-1 text-right text-xs text-gray-400">{description.length} / 5000</div>
+              <div className="mt-1 flex justify-between gap-3 text-xs text-gray-400">
+                <span id="field-description-hint">{t("form.noLinks")}</span>
+                <span className="shrink-0">{description.length} / 5000</span>
+              </div>
             </Field>
           </Section>
 
@@ -335,11 +346,11 @@ export function ListingForm({ categories, listing, initialCategory }: { categori
 
           <div className="sticky bottom-0 -mx-4 px-4 py-3 bg-[#f6f7f9]/95 backdrop-blur sm:static sm:mx-0 sm:px-0 sm:bg-transparent flex gap-3">
             <button type="submit" className="btn-primary !h-12 flex-1 sm:flex-none sm:px-8 text-base" disabled={submitting}>
-              {submitting ? "Сохраняем…" : editing ? "Сохранить изменения" : "Опубликовать"}
+              {submitting ? t("common.saving") : editing ? t("form.saveChanges") : t("form.publish")}
             </button>
             {editing && (
               <button type="button" className="btn-secondary !h-12" onClick={() => router.back()}>
-                Отмена
+                {t("common.cancel")}
               </button>
             )}
           </div>
@@ -369,7 +380,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function Field({ label, required, error, htmlFor, children, wide }: { label: string; required?: boolean; error?: string; htmlFor?: string; children: React.ReactNode; wide?: boolean }) {
+function Field({
+  label,
+  required,
+  error,
+  htmlFor,
+  children,
+  wide,
+  hint,
+}: {
+  label: string;
+  required?: boolean;
+  error?: string;
+  htmlFor?: string;
+  children: React.ReactNode;
+  wide?: boolean;
+  hint?: string | null;
+}) {
   return (
     <div className={wide ? "sm:col-span-2" : ""}>
       {label && (
@@ -379,6 +406,7 @@ function Field({ label, required, error, htmlFor, children, wide }: { label: str
         </label>
       )}
       {children}
+      {hint && <FieldHint hint={hint} id={htmlFor ? `${htmlFor}-hint` : undefined} />}
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
@@ -391,6 +419,7 @@ function AttrField({
   parentLabel,
   error,
   onChange,
+  i18n: { t },
 }: {
   attr: Attribute;
   value: AttrValue | undefined;
@@ -398,13 +427,15 @@ function AttrField({
   parentLabel?: string;
   error?: string;
   onChange: (v: AttrValue | undefined) => void;
+  i18n: Translator;
 }) {
   const id = `attr-${a.key}`;
+  const hint = a.hint;
   const bad = error ? "!border-red-400" : "";
   switch (a.type) {
     case "ref":
       return (
-        <Field label={a.label} required={a.required} error={error} htmlFor={id}>
+        <Field label={a.label} required={a.required} error={error} htmlFor={id} hint={hint}>
           <RefSelect
             id={id}
             refName={a.ref ?? ""}
@@ -412,7 +443,7 @@ function AttrField({
             parentValue={parentValue}
             value={typeof value === "string" ? value : undefined}
             onChange={onChange}
-            disabledText={parentLabel ? `Сначала выберите: ${parentLabel.toLowerCase()}` : undefined}
+            disabledText={parentLabel ? t("common.chooseFirst", { what: parentLabel.toLowerCase() }) : undefined}
             invalid={!!error}
           />
         </Field>
@@ -422,7 +453,7 @@ function AttrField({
       const v = typeof value === "string" ? value : undefined;
       if (opts.length <= 5) {
         return (
-          <Field label={a.label} required={a.required} error={error} wide={opts.length > 3}>
+          <Field label={a.label} required={a.required} error={error} wide={opts.length > 3} hint={hint}>
             <div id={id}>
               <Segmented options={opts} value={v} onChange={(x) => onChange(x === v ? undefined : x)} />
             </div>
@@ -430,9 +461,9 @@ function AttrField({
         );
       }
       return (
-        <Field label={a.label} required={a.required} error={error} htmlFor={id}>
+        <Field label={a.label} required={a.required} error={error} htmlFor={id} hint={hint}>
           <select id={id} className={`input ${bad} ${v ? "" : "text-gray-400"}`} value={v ?? ""} onChange={(e) => onChange(e.target.value || undefined)}>
-            <option value="">Не выбрано</option>
+            <option value="">{t("common.notChosen")}</option>
             {opts.map((o) => (
               <option key={o.value} value={o.value} className="text-gray-900">{o.label}</option>
             ))}
@@ -443,7 +474,7 @@ function AttrField({
     case "multi_enum": {
       const sel = Array.isArray(value) ? value : [];
       return (
-        <Field label={a.label} required={a.required} error={error} wide>
+        <Field label={a.label} required={a.required} error={error} wide hint={hint}>
           <div id={id} className="grid grid-cols-1 min-[420px]:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-1">
             {(a.options ?? []).map((o) => (
               <label key={o.value} className="flex items-center gap-2.5 py-1.5 text-sm cursor-pointer">
@@ -462,7 +493,7 @@ function AttrField({
     }
     case "bool":
       return (
-        <Field label="" error={error}>
+        <Field label="" error={error} hint={hint}>
           <div id={id} className="sm:pt-6">
             <Switch label={a.label} checked={value === true} onChange={(x) => onChange(x)} />
           </div>
@@ -470,16 +501,16 @@ function AttrField({
       );
     case "int":
     case "decimal": {
-      const hint = [a.min != null ? `от ${formatNumber(a.min)}` : null, a.max != null ? `до ${formatNumber(a.max)}` : null].filter(Boolean).join(" ");
+      const range = [a.min != null ? `${t("range.from")} ${formatNumber(a.min)}` : null, a.max != null ? `${t("range.to")} ${formatNumber(a.max)}` : null].filter(Boolean).join(" ");
       return (
-        <Field label={a.label + (a.unit ? `, ${a.unit}` : "")} required={a.required} error={error} htmlFor={id}>
+        <Field label={a.label + (a.unit ? `, ${a.unit}` : "")} required={a.required} error={error} htmlFor={id} hint={hint}>
           <div className="relative">
             <input
               id={id}
               className={`input ${a.unit ? "pr-12" : ""} ${bad}`}
               inputMode={a.type === "decimal" ? "decimal" : "numeric"}
               value={value == null ? "" : String(value)}
-              placeholder={hint}
+              placeholder={range}
               onChange={(e) => {
                 const raw = e.target.value.replace(a.type === "decimal" ? /[^\d.,\s]/g : /[^\d\s]/g, "");
                 onChange(raw === "" ? undefined : raw);
@@ -496,7 +527,7 @@ function AttrField({
     }
     default:
       return (
-        <Field label={a.label} required={a.required} error={error} htmlFor={id}>
+        <Field label={a.label} required={a.required} error={error} htmlFor={id} hint={hint}>
           <input id={id} className={`input ${bad}`} value={typeof value === "string" ? value : ""} onChange={(e) => onChange(e.target.value)} maxLength={200} />
         </Field>
       );

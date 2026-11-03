@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { getI18n } from "@/i18n/server";
 import { AuthGate } from "@/components/AuthGate";
 import { MyListings } from "./MyListings";
 
-export const metadata: Metadata = { title: "Мои объявления", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("nav.my"), robots: { index: false } };
+}
 
 export default function MyPage() {
   return (

@@ -4,6 +4,8 @@ import { formatNumber as fmtCount, type FilterDef, type Option, type RefItem } f
 import { loadRefs } from "./refCache";
 import { fmtNum as formatNumber } from "@/lib/num";
 import { IconSearch } from "../icons";
+import { HintButton } from "../Hint";
+import { useI18n } from "@/i18n/client";
 
 type Counts = Record<string, number> | undefined;
 
@@ -56,6 +58,7 @@ export function RangeFilter({
 
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
+  const { t } = useI18n();
   const unit = def.unit ? ` ${def.unit}` : "";
   const inputCls = "input pr-8";
   const fieldProps = (which: "from" | "to") => ({
@@ -75,14 +78,14 @@ export function RangeFilter({
     <div>
       <div className="flex items-center gap-2">
         <label className="relative flex-1 min-w-0">
-          <span className="sr-only">{def.label} от</span>
-          <input {...fieldProps("from")} placeholder={def.min != null ? `от ${formatNumber(def.min)}` : "от"} className={inputCls} />
+          <span className="sr-only">{def.label} {t("range.from")}</span>
+          <input {...fieldProps("from")} placeholder={def.min != null ? `${t("range.from")} ${formatNumber(def.min)}` : t("range.from")} className={inputCls} />
           {unit && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{def.unit}</span>}
         </label>
         <span className="text-gray-300">—</span>
         <label className="relative flex-1 min-w-0">
-          <span className="sr-only">{def.label} до</span>
-          <input {...fieldProps("to")} placeholder={def.max != null ? `до ${formatNumber(def.max)}` : "до"} className={inputCls} />
+          <span className="sr-only">{def.label} {t("range.to")}</span>
+          <input {...fieldProps("to")} placeholder={def.max != null ? `${t("range.to")} ${formatNumber(def.max)}` : t("range.to")} className={inputCls} />
           {unit && <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">{def.unit}</span>}
         </label>
       </div>
@@ -100,7 +103,7 @@ export function RangeFilter({
                 }}
                 className={`chip !h-7 !px-2.5 text-xs ${active ? "border-accent-500 bg-accent-50 text-accent-700" : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"}`}
               >
-                до {formatNumber(p)}{unit}
+                {t("range.to")} {formatNumber(p)}{unit}
               </button>
             );
           })}
@@ -149,6 +152,7 @@ export function CheckList({
   onChange: (next: string[]) => void;
   collapse?: number;
 }) {
+  const { t } = useI18n();
   const [expanded, setExpanded] = useState(false);
   const long = options.length > collapse + 1;
   const visible = useMemo(() => {
@@ -169,7 +173,7 @@ export function CheckList({
       })}
       {long && (
         <button type="button" className="mt-1 text-sm text-accent-600 hover:underline" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? "Свернуть" : `Показать все (${options.length})`}
+          {expanded ? t("common.collapse") : t("common.showAll", { n: options.length })}
         </button>
       )}
     </div>
@@ -178,10 +182,13 @@ export function CheckList({
 
 /* ---------- toggle ---------- */
 
-export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (v: boolean) => void; label: string }) {
+export function Switch({ checked, onChange, label, hint }: { checked: boolean; onChange: (v: boolean) => void; label: string; hint?: string | null }) {
   return (
-    <label className="flex items-center justify-between gap-3 py-1 cursor-pointer select-none">
-      <span className="text-sm text-gray-800">{label}</span>
+    <div className="relative flex items-center justify-between gap-3 py-1 select-none">
+      <span className="text-sm text-gray-800 flex items-center gap-1.5">
+        <span className="cursor-pointer" onClick={() => onChange(!checked)}>{label}</span>
+        {hint && <HintButton hint={hint} label={label} />}
+      </span>
       <button
         type="button"
         role="switch"
@@ -192,7 +199,7 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
       >
         <span className={`absolute top-0.5 left-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${checked ? "translate-x-5" : ""}`} />
       </button>
-    </label>
+    </div>
   );
 }
 
@@ -249,6 +256,7 @@ export function RefFilter({
   counts: Counts;
   onChange: (ids: string[], names: Record<string, string>) => void;
 }) {
+  const { t } = useI18n();
   const disabled = parentValues !== null && parentValues.length === 0;
   const parentKey = parentValues ? [...parentValues].sort().join(",") : "";
   const [q, setQ] = useState("");
@@ -292,7 +300,7 @@ export function RefFilter({
   }, [def.ref, parentKey, debouncedQ, disabled]);
 
   if (disabled) {
-    return <p className="text-sm text-gray-400 py-1">Сначала выберите: {parentLabel ?? "родительское поле"}</p>;
+    return <p className="text-sm text-gray-400 py-1">{t("common.chooseFirst", { what: parentLabel ?? t("common.parentField") })}</p>;
   }
 
   const list = items ?? [];
@@ -314,7 +322,7 @@ export function RefFilter({
       {showSearch && (
         <div className="relative mb-1.5">
           <IconSearch size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Поиск" className="input !h-9 pl-9" aria-label={`Поиск: ${def.label}`} />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("common.search")} className="input !h-9 pl-9" aria-label={`${t("common.search")}: ${def.label}`} />
         </div>
       )}
       {items === null && !error && (
@@ -322,8 +330,8 @@ export function RefFilter({
           {[0, 1, 2, 3].map((i) => <div key={i} className="skeleton h-5" />)}
         </div>
       )}
-      {error && <p className="text-sm text-red-600 py-1">Не удалось загрузить список</p>}
-      {items !== null && list.length === 0 && <p className="text-sm text-gray-400 py-1">Ничего не найдено</p>}
+      {error && <p className="text-sm text-red-600 py-1">{t("common.loadListFailed")}</p>}
+      {items !== null && list.length === 0 && <p className="text-sm text-gray-400 py-1">{t("common.nothingFound")}</p>}
       <div className={expanded ? "max-h-80 overflow-y-auto pr-1" : ""}>
         {visible.map((it) => {
           const c = counts ? counts[it.id] ?? 0 : undefined;
@@ -332,7 +340,7 @@ export function RefFilter({
       </div>
       {long && (
         <button type="button" className="mt-1 text-sm text-accent-600 hover:underline" onClick={() => setExpanded((v) => !v)}>
-          {expanded ? "Свернуть" : `Показать все (${ordered.length})`}
+          {expanded ? t("common.collapse") : t("common.showAll", { n: ordered.length })}
         </button>
       )}
     </div>

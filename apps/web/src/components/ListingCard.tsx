@@ -1,20 +1,23 @@
+"use client";
 import Link from "next/link";
 import { formatPrice, type ListingCard as Card } from "@kup/shared";
 import { relativeDate } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/status";
+import { useI18n } from "@/i18n/client";
 import { Photo } from "./Photo";
 import { FavoriteButton } from "./FavoriteButton";
 
 
 export function ListingCardView({ item, layout = "grid", eager = false, footer }: { item: Card; layout?: "grid" | "list"; eager?: boolean; footer?: React.ReactNode }) {
-  const status = item.status === "active" ? null : STATUS_LABEL[item.status];
+  const { t, tn, lang } = useI18n();
+  const status = item.status === "active" ? null : t(STATUS_LABEL[item.status]);
   if (layout === "list") {
     return (
       <article className="card overflow-hidden relative group">
         <Link href={`/l/${item.id}`} className="flex gap-3 sm:gap-4 p-3">
           <div className="relative w-32 sm:w-56 shrink-0 aspect-[4/3] rounded-xl overflow-hidden">
             <Photo src={item.photos[0]} alt={item.title} className="w-full h-full" eager={eager} />
-            {item.photos.length > 1 && <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/55 px-1.5 text-[11px] text-white">{item.photos.length} фото</span>}
+            {item.photos.length > 1 && <span className="absolute bottom-1.5 right-1.5 rounded-md bg-black/55 px-1.5 text-[11px] text-white">{tn("count.photos", item.photos.length)}</span>}
           </div>
           <div className="min-w-0 flex-1 flex flex-col pr-8">
             <h3 className="font-medium text-[15px] sm:text-base leading-snug line-clamp-2 group-hover:text-accent-600">{item.title}</h3>
@@ -22,7 +25,7 @@ export function ListingCardView({ item, layout = "grid", eager = false, footer }
             {item.highlights.length > 0 && <p className="mt-1 text-sm text-gray-600 line-clamp-2">{item.highlights.join(" · ")}</p>}
             <div className="mt-auto pt-2 text-xs text-gray-500 flex flex-wrap gap-x-2">
               <span>{item.city?.name}</span>
-              <span suppressHydrationWarning>{relativeDate(item.published_at)}</span>
+              <span suppressHydrationWarning>{relativeDate(item.published_at, lang)}</span>
               {status && <span className={item.status === "blocked" ? "text-red-600" : "text-amber-700"}>{status}</span>}
             </div>
           </div>
@@ -45,7 +48,7 @@ export function ListingCardView({ item, layout = "grid", eager = false, footer }
           {item.highlights.length > 0 && <p className="mt-1 text-xs text-gray-600 line-clamp-2">{item.highlights.join(" · ")}</p>}
           <div className="mt-auto pt-2 text-xs text-gray-500 flex flex-wrap gap-x-2">
             <span className="truncate">{item.city?.name}</span>
-            <span suppressHydrationWarning>{relativeDate(item.published_at)}</span>
+            <span suppressHydrationWarning>{relativeDate(item.published_at, lang)}</span>
           </div>
         </div>
       </Link>
@@ -90,11 +93,12 @@ export function EmptyState({ title, text, action }: { title: string; text?: stri
   );
 }
 
-export function ErrorState({ text = "Не удалось загрузить данные. Попробуйте обновить страницу." }: { text?: string }) {
+export function ErrorState({ text }: { text?: string }) {
+  const { t } = useI18n();
   return (
     <div className="card px-6 py-10 text-center border-red-100">
-      <div className="text-lg font-semibold text-red-700">Ошибка загрузки</div>
-      <p className="mt-1 text-gray-600">{text}</p>
+      <div className="text-lg font-semibold text-red-700">{t("err.loadTitle")}</div>
+      <p className="mt-1 text-gray-600">{text ?? t("err.loadText")}</p>
     </div>
   );
 }

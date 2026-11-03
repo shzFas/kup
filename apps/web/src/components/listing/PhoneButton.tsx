@@ -6,9 +6,11 @@ import { api } from "@/lib/client-api";
 import { errorMessage } from "@/lib/errors";
 import { formatPhone } from "@/lib/format";
 import { IconPhone } from "../icons";
+import { useI18n } from "@/i18n/client";
 
 export function PhoneButton({ id }: { id: string }) {
   const { user } = useAuth();
+  const { t, lang } = useI18n();
   const router = useRouter();
   const [phone, setPhone] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -37,13 +39,13 @@ export function PhoneButton({ id }: { id: string }) {
           try {
             setPhone(await api().listingPhone(id));
           } catch (e) {
-            setError(errorMessage(e));
+            setError(errorMessage(e, lang));
           } finally {
             setLoading(false);
           }
         }}
       >
-        <IconPhone size={18} /> {loading ? "Загрузка…" : "Показать телефон"}
+        <IconPhone size={18} /> {loading ? t("common.loading") : t("listing.showPhone")}
       </button>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
     </div>

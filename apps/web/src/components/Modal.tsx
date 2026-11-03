@@ -1,9 +1,11 @@
 "use client";
 import { useEffect } from "react";
 import { IconX } from "./icons";
+import { useI18n } from "@/i18n/client";
 
 /** Centered dialog on desktop, bottom sheet on mobile. */
 export function Modal({ title, onClose, children, footer }: { title: string; onClose: () => void; children: React.ReactNode; footer?: React.ReactNode }) {
+  const { t } = useI18n();
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -25,7 +27,7 @@ export function Modal({ title, onClose, children, footer }: { title: string; onC
       >
         <div className="h-14 shrink-0 flex items-center justify-between px-5 border-b border-gray-100">
           <h2 className="font-semibold">{title}</h2>
-          <button type="button" onClick={onClose} className="p-2 -mr-2 text-gray-500 hover:text-gray-900" aria-label="Закрыть">
+          <button type="button" onClick={onClose} className="p-2 -mr-2 text-gray-500 hover:text-gray-900" aria-label={t("common.close")}>
             <IconX size={20} />
           </button>
         </div>

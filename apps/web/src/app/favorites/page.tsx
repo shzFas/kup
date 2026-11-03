@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { getI18n } from "@/i18n/server";
 import { AuthGate } from "@/components/AuthGate";
 import { FavoritesList } from "./FavoritesList";
 
-export const metadata: Metadata = { title: "Избранное", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("nav.favorites"), robots: { index: false } };
+}
 
 export default function FavoritesPage() {
   return (

@@ -12,6 +12,8 @@ import {
 import { groupFilters } from "@/lib/search";
 import { CheckList, RangeFilter, RefFilter, Segmented, Switch } from "./widgets";
 import { IconChevronDown } from "../icons";
+import { HintButton } from "../Hint";
+import { useI18n } from "@/i18n/client";
 
 export interface FilterPanelProps {
   schema: CategorySchema;
@@ -26,7 +28,8 @@ export interface FilterPanelProps {
 export function FilterPanel({ schema, value, onChange, facets, onRefNames, idPrefix = "filter-", openAll = false }: FilterPanelProps) {
   const deps = filterValuesForDeps(value);
   const visibleDefs = schema.filters.filter((d) => isDependencyMet(d.depends_on, deps));
-  const groups = groupFilters(schema, visibleDefs);
+  const { t } = useI18n();
+  const groups = groupFilters(schema, visibleDefs, { common: t("filters.common"), other: t("filters.other") });
 
   const set = (key: string, v: FilterValue | undefined) => {
     const next = { ...value };
@@ -43,11 +46,12 @@ export function FilterPanel({ schema, value, onChange, facets, onRefNames, idPre
             {g.filters.map((def) => (
               <div key={def.key} id={`${idPrefix}${def.key}`} className="scroll-mt-20">
                 {def.widget !== "toggle" && (
-                  <div className="mb-2 text-sm font-medium text-gray-900">
+                  <div className="relative mb-2 flex items-center gap-1.5 text-sm font-medium text-gray-900">
                     {def.label}
+                    {def.hint && <HintButton hint={def.hint} label={def.label} />}
                   </div>
                 )}
-                <FilterWidget def={def} schema={schema} value={value} facets={facets} set={set} onRefNames={onRefNames} />
+                <FilterWidget def={def} schema={schema} value={value} facets={facets} set={set} onRefNames={onRefNames} anyLabel={t("common.any")} />
               </div>
             ))}
           </div>
@@ -77,6 +81,7 @@ function FilterWidget({
   facets,
   set,
   onRefNames,
+  anyLabel,
 }: {
   def: FilterDef;
   schema: CategorySchema;
@@ -84,6 +89,7 @@ function FilterWidget({
   facets: Record<string, Record<string, number>>;
   set: (key: string, v: FilterValue | undefined) => void;
   onRefNames: (names: Record<string, string>) => void;
+  anyLabel: string;
 }) {
   const cur = value[def.key];
   const counts = def.facet ? facets[def.key] : undefined;
@@ -100,11 +106,11 @@ function FilterWidget({
     }
     case "toggle": {
       const on = !!cur && "eq" in cur && cur.eq === true;
-      return <Switch label={def.label} checked={on} onChange={(v) => set(def.key, v ? { eq: true } : undefined)} />;
+      return <Switch label={def.label} hint={def.hint} checked={on} onChange={(v) => set(def.key, v ? { eq: true } : undefined)} />;
     }
     case "select": {
       const v = cur && "eq" in cur && typeof cur.eq === "string" ? cur.eq : undefined;
-      return <Segmented options={def.options ?? []} value={v} anyLabel="Любой" onChange={(n) => set(def.key, n ? { eq: n } : undefined)} />;
+      return <Segmented options={def.options ?? []} value={v} anyLabel={anyLabel} onChange={(n) => set(def.key, n ? { eq: n } : undefined)} />;
     }
     case "ref": {
       const sel = cur && "in" in cur ? cur.in : [];

@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { getI18n } from "@/i18n/server";
 import { AuthGate } from "@/components/AuthGate";
 import { ProfileForm } from "./ProfileForm";
 
-export const metadata: Metadata = { title: "Профиль", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("nav.profile"), robots: { index: false } };
+}
 
 export default function ProfilePage() {
   return (

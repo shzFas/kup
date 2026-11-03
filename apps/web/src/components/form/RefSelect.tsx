@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { RefItem } from "@kup/shared";
 import { loadRefs } from "../filters/refCache";
 import { IconChevronDown, IconSearch, IconX } from "../icons";
+import { useI18n } from "@/i18n/client";
 
 /** Searchable single-select for a reference list (city, make, model…). */
 export function RefSelect({
@@ -12,7 +13,7 @@ export function RefSelect({
   hasParent,
   value,
   onChange,
-  placeholder = "Выберите",
+  placeholder,
   disabledText,
   invalid,
 }: {
@@ -26,6 +27,8 @@ export function RefSelect({
   disabledText?: string;
   invalid?: boolean;
 }) {
+  const { t } = useI18n();
+  placeholder ??= t("common.choose");
   const disabled = hasParent && !parentValue;
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -112,7 +115,7 @@ export function RefSelect({
             <span
               role="button"
               tabIndex={-1}
-              aria-label="Очистить"
+              aria-label={t("common.clear")}
               onClick={(e) => {
                 e.stopPropagation();
                 onChange(undefined);
@@ -133,7 +136,7 @@ export function RefSelect({
               ref={inputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Поиск"
+              placeholder={t("common.search")}
               className="input !h-9 pl-9"
               onKeyDown={(e) => {
                 if (e.key === "ArrowDown") { e.preventDefault(); setActive((a) => Math.min(a + 1, list.length - 1)); }
@@ -144,9 +147,9 @@ export function RefSelect({
             />
           </div>
           <ul role="listbox" className="mt-1 max-h-64 overflow-y-auto">
-            {items === null && !error && <li className="px-3 py-2 text-sm text-gray-400">Загрузка…</li>}
-            {error && <li className="px-3 py-2 text-sm text-red-600">Не удалось загрузить список</li>}
-            {items !== null && list.length === 0 && <li className="px-3 py-2 text-sm text-gray-400">Ничего не найдено</li>}
+            {items === null && !error && <li className="px-3 py-2 text-sm text-gray-400">{t("common.loading")}</li>}
+            {error && <li className="px-3 py-2 text-sm text-red-600">{t("common.loadListFailed")}</li>}
+            {items !== null && list.length === 0 && <li className="px-3 py-2 text-sm text-gray-400">{t("common.nothingFound")}</li>}
             {list.map((it, i) => (
               <li key={it.id} role="option" aria-selected={it.id === value}>
                 <button

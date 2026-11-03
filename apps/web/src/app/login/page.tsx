@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
+import { getI18n } from "@/i18n/server";
 import { Suspense } from "react";
 import { LoginForm } from "./LoginForm";
 
-export const metadata: Metadata = { title: "Вход", description: "Вход на kup по номеру телефона", robots: { index: false } };
+export async function generateMetadata(): Promise<Metadata> {
+  const { t } = await getI18n();
+  return { title: t("login.metaTitle"), description: t("login.metaDescription"), robots: { index: false } };
+}
 
 export default function LoginPage() {
   return (

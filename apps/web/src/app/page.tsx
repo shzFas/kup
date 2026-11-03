@@ -3,13 +3,15 @@ import type { ListingCard } from "@kup/shared";
 import { getCategories, serverApi } from "@/lib/server-api";
 import { CategoryIcon, IconChevronRight } from "@/components/icons";
 import { ListingCardView, ErrorState } from "@/components/ListingCard";
+import { NewcomerTip } from "@/components/NewcomerTip";
 import { listingsCount } from "@/lib/format";
+import { getI18n } from "@/i18n/server";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { items: categories, error } = await getCategories();
-  const api = serverApi();
+  const [{ items: categories, error }, { t, lang }] = await Promise.all([getCategories(), getI18n()]);
+  const api = serverApi(lang);
   const sections = await Promise.all(
     categories.map(async (c) => {
       try {
@@ -23,8 +25,12 @@ export default async function HomePage() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8">
-      <h1 className="sr-only">kup — доска объявлений</h1>
-      <section aria-label="Категории" className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="mb-5">
+        <h1 className="text-2xl sm:text-3xl font-bold">{t("home.title")}</h1>
+        <p className="mt-1 text-gray-600">{t("home.subtitle")}</p>
+      </div>
+      <NewcomerTip />
+      <section aria-label={t("home.categories")} className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {categories.map((c) => {
           const total = sections.find((s) => s.category.slug === c.slug)?.total;
           return (
@@ -34,7 +40,7 @@ export default async function HomePage() {
               </span>
               <span className="min-w-0">
                 <span className="block font-semibold leading-tight">{c.name}</span>
-                {total != null && total > 0 && <span className="block text-xs text-gray-500 mt-0.5">{listingsCount(total)}</span>}
+                {total != null && total > 0 && <span className="block text-xs text-gray-500 mt-0.5">{listingsCount(total, lang)}</span>}
               </span>
             </Link>
           );
@@ -43,7 +49,7 @@ export default async function HomePage() {
 
       {error && (
         <div className="mt-8">
-          <ErrorState text="Сервер недоступен. Попробуйте обновить страницу чуть позже." />
+          <ErrorState text={t("err.serverDown")} />
         </div>
       )}
 
@@ -53,10 +59,10 @@ export default async function HomePage() {
           <section key={s.category.slug} className="mt-10">
             <div className="flex items-end justify-between gap-4 mb-4">
               <h2 className="text-xl sm:text-2xl font-bold">
-                Свежие объявления · <span className="text-gray-500 font-semibold">{s.category.name}</span>
+                {t("home.fresh")} · <span className="text-gray-500 font-semibold">{s.category.name}</span>
               </h2>
               <Link href={`/s/${s.category.slug}`} className="text-sm text-accent-600 hover:underline inline-flex items-center shrink-0">
-                Все <IconChevronRight size={16} />
+                {t("home.all")} <IconChevronRight size={16} />
               </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
@@ -69,9 +75,9 @@ export default async function HomePage() {
 
       {!error && sections.every((s) => s.items.length === 0) && (
         <div className="mt-10 card px-6 py-12 text-center">
-          <div className="text-lg font-semibold">Пока нет объявлений</div>
-          <p className="mt-1 text-gray-500">Станьте первым — разместите объявление бесплатно.</p>
-          <Link href="/new" className="btn-primary mt-4">Подать объявление</Link>
+          <div className="text-lg font-semibold">{t("home.emptyTitle")}</div>
+          <p className="mt-1 text-gray-500">{t("home.emptyText")}</p>
+          <Link href="/new" className="btn-primary mt-4">{t("header.post")}</Link>
         </div>
       )}
     </div>
