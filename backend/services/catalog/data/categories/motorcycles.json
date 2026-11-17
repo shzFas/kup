@@ -1,0 +1,127 @@
+{
+  "slug": "motorcycles",
+  "icon": "motorcycle",
+  "position": 2,
+  "name": {
+    "ru": "Мотоциклы",
+    "uk": "Мотоцикли",
+    "cs": "Motorky",
+    "en": "Motorcycles"
+  },
+  "groups": [
+    {
+      "key": "main",
+      "label": {
+        "ru": "Основное",
+        "uk": "Основне",
+        "cs": "Základní údaje",
+        "en": "Basics"
+      }
+    },
+    {
+      "key": "engine",
+      "label": {
+        "ru": "Двигатель и трансмиссия",
+        "uk": "Двигун і трансмісія",
+        "cs": "Motor a převodovka",
+        "en": "Engine & transmission"
+      }
+    },
+    {
+      "key": "history",
+      "label": {
+        "ru": "История и документы",
+        "uk": "Історія та документи",
+        "cs": "Historie a doklady",
+        "en": "History & documents"
+      }
+    },
+    {
+      "key": "options",
+      "label": {
+        "ru": "Оснащение",
+        "uk": "Оснащення",
+        "cs": "Výbava",
+        "en": "Equipment"
+      }
+    }
+  ],
+  "highlights": [
+    "year",
+    "mileage_km",
+    "engine_cc",
+    "power_hp",
+    "license_category"
+  ],
+  "sorts": [
+    {
+      "value": "date_desc",
+      "label": {
+        "ru": "Сначала новые",
+        "uk": "Спочатку нові",
+        "cs": "Nejnovější",
+        "en": "Newest first"
+      }
+    },
+    {
+      "value": "price_asc",
+      "label": {
+        "ru": "Сначала дешёвые",
+        "uk": "Спочатку дешевші",
+        "cs": "Od nejlevnějších",
+        "en": "Price: low to high"
+      }
+    },
+    {
+      "value": "price_desc",
+      "label": {
+        "ru": "Сначала дорогие",
+        "uk": "Спочатку дорожчі",
+        "cs": "Od nejdražších",
+        "en": "Price: high to low"
+      }
+    },
+    {
+      "value": "year_desc",
+      "label": {
+        "ru": "Год: новее",
+        "uk": "Рік: новіші",
+        "cs": "Rok výroby: nejnovější",
+        "en": "Year: newest first"
+      }
+    },
+    {
+      "value": "mileage_asc",
+      "label": {
+        "ru": "Пробег: меньше",
+        "uk": "Пробіг: менший",
+        "cs": "Nejnižší nájezd",
+        "en": "Mileage: lowest first"
+      }
+    }
+  ],
+  "attributes": [
+    {"key": "make", "type": "ref", "label": {"ru": "Марка", "uk": "Марка", "cs": "Značka", "en": "Make"}, "group": "main", "required": true, "ref": "moto_make", "filter": {"pinned": true, "facet": true}},
+    {"key": "model", "type": "ref", "label": {"ru": "Модель", "uk": "Модель", "cs": "Model", "en": "Model"}, "group": "main", "required": true, "ref": "moto_model", "parent": "make", "filter": {"facet": true}},
+    {"key": "moto_type", "type": "enum", "label": {"ru": "Тип", "uk": "Тип", "cs": "Typ", "en": "Type"}, "group": "main", "required": true, "options": [{"value": "sport", "label": {"ru": "Спортбайк", "uk": "Спортбайк", "cs": "Sportovní", "en": "Sport"}}, {"value": "naked", "label": {"ru": "Нейкед", "uk": "Нейкед", "cs": "Naked", "en": "Naked"}}, {"value": "cruiser", "label": {"ru": "Круизер / чоппер", "uk": "Круїзер / чопер", "cs": "Cruiser / chopper", "en": "Cruiser / chopper"}}, {"value": "touring", "label": {"ru": "Туристический", "uk": "Туристичний", "cs": "Cestovní", "en": "Touring"}}, {"value": "adventure", "label": {"ru": "Эндуро / адвенчер", "uk": "Ендуро / адвенчер", "cs": "Enduro / adventure", "en": "Adventure / enduro"}}, {"value": "cross", "label": {"ru": "Кросс", "uk": "Крос", "cs": "Motokros", "en": "Motocross"}}, {"value": "supermoto", "label": {"ru": "Мотард", "uk": "Мотард", "cs": "Supermoto", "en": "Supermoto"}}, {"value": "classic", "label": {"ru": "Классика", "uk": "Класика", "cs": "Klasik / veterán", "en": "Classic"}}, {"value": "custom", "label": {"ru": "Кастом", "uk": "Кастом", "cs": "Custom", "en": "Custom"}}, {"value": "trike", "label": {"ru": "Трицикл", "uk": "Трицикл", "cs": "Tříkolka", "en": "Trike"}}, {"value": "atv", "label": {"ru": "Квадроцикл", "uk": "Квадроцикл", "cs": "Čtyřkolka", "en": "ATV (quad)"}}], "filter": {"pinned": true, "facet": true}},
+    {"key": "year", "type": "int", "label": {"ru": "Год выпуска", "uk": "Рік випуску", "cs": "Rok výroby", "en": "Year"}, "group": "main", "required": true, "min": 1930, "max": 2027, "filter": {"pinned": true, "presets": [2010, 2015, 2018, 2020, 2023]}},
+    {"key": "mileage_km", "type": "int", "label": {"ru": "Пробег", "uk": "Пробіг", "cs": "Najeto", "en": "Mileage"}, "group": "main", "required": true, "min": 0, "max": 500000, "unit": {"ru": "км", "uk": "км", "cs": "km", "en": "km"}, "filter": {"presets": [5000, 10000, 20000, 50000]}},
+    {"key": "condition", "type": "enum", "label": {"ru": "Состояние", "uk": "Стан", "cs": "Stav", "en": "Condition"}, "group": "main", "required": true, "options": [{"value": "new", "label": {"ru": "Новый", "uk": "Новий", "cs": "Nový", "en": "New"}}, {"value": "used", "label": {"ru": "С пробегом", "uk": "Вживаний", "cs": "Ojetý", "en": "Used"}}, {"value": "damaged", "label": {"ru": "Битый", "uk": "Пошкоджений", "cs": "Havarovaný", "en": "Damaged"}}, {"value": "parts", "label": {"ru": "На запчасти", "uk": "На запчастини", "cs": "Na náhradní díly", "en": "For parts"}}], "filter": {"facet": true}},
+    {"key": "engine_cc", "type": "int", "label": {"ru": "Объём двигателя", "uk": "Об'єм двигуна", "cs": "Objem motoru", "en": "Engine size"}, "group": "engine", "required": true, "min": 49, "max": 3000, "unit": {"ru": "см³", "uk": "см³", "cs": "cm³", "en": "cc"}, "filter": {"pinned": true, "presets": [125, 250, 400, 600, 750, 1000]}},
+    {"key": "power_hp", "type": "int", "label": {"ru": "Мощность", "uk": "Потужність", "cs": "Výkon", "en": "Power"}, "group": "engine", "required": false, "min": 1, "max": 400, "unit": {"ru": "л.с.", "uk": "к.с.", "cs": "k", "en": "hp"}, "hint": {"ru": "В техпаспорте мощность в кВт: 1 кВт ≈ 1,36 л.с. Для прав A2 — не больше 35 кВт (47 л.с.).", "uk": "У техпаспорті потужність у кВт: 1 кВт ≈ 1,36 к.с. Для прав A2 — не більше 35 кВт (47 к.с.).", "cs": "Uvádějte v koních (k): 1 kW ≈ 1,36 k. Pro skupinu A2 nejvýše 35 kW (47 k).", "en": "Enter horsepower: 1 kW ≈ 1.36 hp. For an A2 licence the limit is 35 kW (47 hp)."}, "filter": {"presets": [15, 47, 100, 150]}},
+    {"key": "license_category", "type": "enum", "label": {"ru": "Категория прав", "uk": "Категорія прав", "cs": "Řidičské oprávnění", "en": "Licence category"}, "group": "engine", "required": false, "options": [{"value": "AM", "label": "AM"}, {"value": "A1", "label": "A1"}, {"value": "A2", "label": "A2"}, {"value": "A", "label": "A"}], "computed": true, "hint": {"ru": "Считается автоматически. A1: до 125 см³ и 11 кВт (с 16 лет); A2: до 35 кВт (с 18); A: без ограничений (с 24 или через 2 года с A2).", "uk": "Визначається автоматично. A1: до 125 см³ і 11 кВт (з 16 років); A2: до 35 кВт (з 18); A: без обмежень (з 24 або через 2 роки з A2).", "cs": "Určí se automaticky. A1: do 125 cm³ a 11 kW (od 16 let); A2: do 35 kW (od 18); A: bez omezení (od 24, nebo po 2 letech s A2).", "en": "Set automatically. A1: up to 125 cc and 11 kW (16+); A2: up to 35 kW (18+); A: unrestricted (24+, or after 2 years on A2)."}, "filter": {"pinned": true, "facet": true, "label": {"ru": "Подходит под права", "uk": "Підходить під права", "cs": "Pro řidičák", "en": "For licence"}, "hint": {"ru": "Какие права нужны в ЕС. B (авто) хватит только на 125 см³ с автоматом — см. «Мопеды и скутеры».", "uk": "Які права потрібні в ЄС. B (авто) вистачить лише на 125 см³ з автоматом — див. «Мопеди та скутери».", "cs": "Jaké oprávnění je v EU potřeba. Řidičák B stačí jen na 125 cm³ s automatem — viz „Mopedy a skútry“.", "en": "Which EU licence you need. A car licence (B) only covers 125 cc automatics — see “Mopeds & scooters”."}}},
+    {"key": "stroke", "type": "enum", "label": {"ru": "Тактность", "uk": "Тактність", "cs": "Taktnost", "en": "Stroke"}, "group": "engine", "required": false, "options": [{"value": "2t", "label": {"ru": "2-тактный", "uk": "2-тактний", "cs": "Dvoutakt", "en": "Two-stroke"}}, {"value": "4t", "label": {"ru": "4-тактный", "uk": "4-тактний", "cs": "Čtyřtakt", "en": "Four-stroke"}}, {"value": "electric", "label": {"ru": "Электро", "uk": "Електро", "cs": "Elektro", "en": "Electric"}}], "filter": {"facet": true}},
+    {"key": "cylinders", "type": "enum", "label": {"ru": "Двигатель", "uk": "Двигун", "cs": "Uspořádání motoru", "en": "Engine layout"}, "group": "engine", "required": false, "options": [{"value": "1", "label": {"ru": "1 цилиндр", "uk": "1 циліндр", "cs": "Jednoválec", "en": "Single"}}, {"value": "2v", "label": "V-twin"}, {"value": "2", "label": {"ru": "Рядный 2", "uk": "Рядний 2", "cs": "Řadový dvouválec", "en": "Parallel twin"}}, {"value": "3", "label": {"ru": "Рядный 3", "uk": "Рядний 3", "cs": "Tříválec", "en": "Triple"}}, {"value": "4", "label": {"ru": "Рядный 4", "uk": "Рядний 4", "cs": "Čtyřválec", "en": "Inline four"}}, {"value": "v4", "label": "V4"}, {"value": "boxer", "label": {"ru": "Оппозит (боксер)", "uk": "Опозитний (боксер)", "cs": "Boxer", "en": "Boxer"}}, {"value": "electric", "label": {"ru": "Электро", "uk": "Електро", "cs": "Elektro", "en": "Electric"}}], "filter": {}},
+    {"key": "cooling", "type": "enum", "label": {"ru": "Охлаждение", "uk": "Охолодження", "cs": "Chlazení", "en": "Cooling"}, "group": "engine", "required": false, "options": [{"value": "air", "label": {"ru": "Воздушное", "uk": "Повітряне", "cs": "Vzduchem", "en": "Air"}}, {"value": "liquid", "label": {"ru": "Жидкостное", "uk": "Рідинне", "cs": "Kapalinou", "en": "Liquid"}}], "filter": {}},
+    {"key": "transmission", "type": "enum", "label": {"ru": "Коробка", "uk": "Коробка", "cs": "Převodovka", "en": "Transmission"}, "group": "engine", "required": false, "options": [{"value": "manual", "label": {"ru": "Механика", "uk": "Механіка", "cs": "Manuální", "en": "Manual"}}, {"value": "automatic", "label": {"ru": "Автомат", "uk": "Автомат", "cs": "Automatická", "en": "Automatic"}}, {"value": "dct", "label": "DCT"}], "filter": {"facet": true}},
+    {"key": "final_drive", "type": "enum", "label": {"ru": "Привод", "uk": "Привід", "cs": "Sekundární převod", "en": "Final drive"}, "group": "engine", "required": false, "options": [{"value": "chain", "label": {"ru": "Цепь", "uk": "Ланцюг", "cs": "Řetěz", "en": "Chain"}}, {"value": "belt", "label": {"ru": "Ремень", "uk": "Ремінь", "cs": "Řemen", "en": "Belt"}}, {"value": "shaft", "label": {"ru": "Кардан", "uk": "Кардан", "cs": "Kardan", "en": "Shaft"}}], "filter": {}},
+    {"key": "origin", "type": "enum", "label": {"ru": "Происхождение", "uk": "Походження", "cs": "Původ", "en": "Origin"}, "group": "history", "required": false, "options": [{"value": "cz", "label": {"ru": "Куплен новым в Чехии", "uk": "Куплений новим у Чехії", "cs": "Původem z ČR", "en": "First sold in Czechia"}}, {"value": "imported", "label": {"ru": "Ввезён из-за границы", "uk": "Ввезений з-за кордону", "cs": "Dovoz", "en": "Imported"}}], "hint": {"ru": "Мотоцикл, проданный новым в Чехии, проще проверить: история у дилеров, пробег в базе STK. У ввезённых проверяйте по VIN.", "uk": "Мотоцикл, проданий новим у Чехії, легше перевірити: історія в дилерів, пробіг у базі STK. У ввезених перевіряйте за VIN.", "cs": "Motorka z ČR se snáz prověří: servisní historie u dealerů, nájezd v databázi STK. U dovozu si historii ověřte podle VIN.", "en": "Bikes first sold in CZ are easier to check: dealer service history, mileage in the STK database. For imports, check by VIN."}, "filter": {"facet": true}},
+    {"key": "owners", "type": "int", "label": {"ru": "Владельцев", "uk": "Власників", "cs": "Počet majitelů", "en": "Owners"}, "group": "history", "required": false, "min": 1, "max": 20, "filter": {"label": {"ru": "Владельцев не больше", "uk": "Власників не більше", "cs": "Max. počet majitelů", "en": "Max. owners"}, "presets": [1, 2, 3]}},
+    {"key": "stk_valid", "type": "bool", "label": {"ru": "Действующий техосмотр (STK)", "uk": "Чинний техогляд (STK)", "cs": "Platná STK", "en": "Valid roadworthiness test (STK)"}, "group": "history", "required": false, "hint": {"ru": "STK — обязательный техосмотр в Чехии: новый мотоцикл через 4 года, дальше каждые 2 года. Без действующего STK ездить нельзя.", "uk": "STK — обов'язковий техогляд у Чехії: новий мотоцикл через 4 роки, далі кожні 2 роки. Без чинного STK їздити не можна.", "cs": "Technická kontrola: nová motorka po 4 letech, poté každé 2 roky. Bez platné STK se nesmí jezdit.", "en": "STK is the mandatory Czech roadworthiness test: 4 years after first registration, then every 2 years. No valid STK, no riding."}, "filter": {"label": {"ru": "С действующим STK", "uk": "З чинним STK", "cs": "S platnou STK", "en": "Valid STK"}}},
+    {"key": "service_book", "type": "bool", "label": {"ru": "Сервисная книжка", "uk": "Сервісна книжка", "cs": "Servisní knížka", "en": "Service book"}, "group": "history", "required": false, "filter": {}},
+    {"key": "no_accidents", "type": "bool", "label": {"ru": "Не падал, без ДТП", "uk": "Не падав, без ДТП", "cs": "Nehavarováno", "en": "No crashes"}, "group": "history", "required": false, "filter": {}},
+    {"key": "exchange", "type": "bool", "label": {"ru": "Возможен обмен", "uk": "Можливий обмін", "cs": "Možná výměna", "en": "Exchange possible"}, "group": "history", "required": false, "filter": {}},
+    {"key": "vin", "type": "text", "label": {"ru": "VIN / номер рамы", "uk": "VIN / номер рами", "cs": "VIN / číslo rámu", "en": "VIN / frame number"}, "group": "history", "required": false, "hint": {"ru": "Указан в техпаспорте и выбит на раме. По нему покупатели проверят историю.", "uk": "Зазначений у техпаспорті та вибитий на рамі. За ним покупці перевірять історію.", "cs": "Je v technickém průkazu a vyražený na rámu. Kupující si podle něj ověří historii.", "en": "Shown in the registration document and stamped on the frame. Buyers use it to check history."}},
+    {"key": "options", "type": "multi_enum", "label": {"ru": "Оснащение", "uk": "Оснащення", "cs": "Výbava", "en": "Equipment"}, "group": "options", "required": false, "options": [{"value": "abs", "label": "ABS"}, {"value": "traction", "label": {"ru": "Трекшн-контроль", "uk": "Трекшн-контроль", "cs": "Kontrola trakce", "en": "Traction control"}}, {"value": "quickshifter", "label": {"ru": "Квикшифтер", "uk": "Квікшифтер", "cs": "Quickshifter", "en": "Quickshifter"}}, {"value": "cruise", "label": {"ru": "Круиз-контроль", "uk": "Круїз-контроль", "cs": "Tempomat", "en": "Cruise control"}}, {"value": "heated_grips", "label": {"ru": "Подогрев ручек", "uk": "Підігрів ручок", "cs": "Vyhřívané rukojeti", "en": "Heated grips"}}, {"value": "cases", "label": {"ru": "Кофры", "uk": "Кофри", "cs": "Kufry", "en": "Luggage cases"}}, {"value": "crash_bars", "label": {"ru": "Защитные дуги", "uk": "Захисні дуги", "cs": "Padací rámy", "en": "Crash bars"}}, {"value": "windshield", "label": {"ru": "Ветровое стекло", "uk": "Вітрове скло", "cs": "Plexištít", "en": "Windscreen"}}, {"value": "a2_kit", "label": {"ru": "Можно ограничить до A2 (35 кВт)", "uk": "Можна обмежити до A2 (35 кВт)", "cs": "Lze omezit na A2 (35 kW)", "en": "A2 restriction possible (35 kW)"}}], "filter": {}}
+  ]
+}

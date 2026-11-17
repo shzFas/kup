@@ -1,0 +1,10 @@
+{
+  "name": "kup",
+  "private": true,
+  "packageManager": "pnpm@12.9.1",
+  "scripts": {
+    "web": "pnpm --filter @kup/web dev",
+    "mobile": "pnpm --filter @kup/mobile start",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

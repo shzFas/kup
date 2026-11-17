@@ -1,0 +1,141 @@
+{
+  "slug": "cars",
+  "icon": "car",
+  "position": 1,
+  "name": {
+    "ru": "Автомобили",
+    "uk": "Автомобілі",
+    "cs": "Osobní auta",
+    "en": "Cars"
+  },
+  "groups": [
+    {
+      "key": "main",
+      "label": {
+        "ru": "Основное",
+        "uk": "Основне",
+        "cs": "Základní údaje",
+        "en": "Basics"
+      }
+    },
+    {
+      "key": "body",
+      "label": {
+        "ru": "Кузов",
+        "uk": "Кузов",
+        "cs": "Karoserie",
+        "en": "Body"
+      }
+    },
+    {
+      "key": "engine",
+      "label": {
+        "ru": "Двигатель и трансмиссия",
+        "uk": "Двигун і трансмісія",
+        "cs": "Motor a převodovka",
+        "en": "Engine & transmission"
+      }
+    },
+    {
+      "key": "history",
+      "label": {
+        "ru": "История и документы",
+        "uk": "Історія та документи",
+        "cs": "Historie a doklady",
+        "en": "History & documents"
+      }
+    },
+    {
+      "key": "options",
+      "label": {
+        "ru": "Комплектация",
+        "uk": "Комплектація",
+        "cs": "Výbava",
+        "en": "Equipment"
+      }
+    }
+  ],
+  "highlights": [
+    "year",
+    "mileage_km",
+    "fuel",
+    "power_hp",
+    "transmission"
+  ],
+  "sorts": [
+    {
+      "value": "date_desc",
+      "label": {
+        "ru": "Сначала новые",
+        "uk": "Спочатку нові",
+        "cs": "Nejnovější",
+        "en": "Newest first"
+      }
+    },
+    {
+      "value": "price_asc",
+      "label": {
+        "ru": "Сначала дешёвые",
+        "uk": "Спочатку дешевші",
+        "cs": "Od nejlevnějších",
+        "en": "Price: low to high"
+      }
+    },
+    {
+      "value": "price_desc",
+      "label": {
+        "ru": "Сначала дорогие",
+        "uk": "Спочатку дорожчі",
+        "cs": "Od nejdražších",
+        "en": "Price: high to low"
+      }
+    },
+    {
+      "value": "year_desc",
+      "label": {
+        "ru": "Год: новее",
+        "uk": "Рік: новіші",
+        "cs": "Rok výroby: nejnovější",
+        "en": "Year: newest first"
+      }
+    },
+    {
+      "value": "mileage_asc",
+      "label": {
+        "ru": "Пробег: меньше",
+        "uk": "Пробіг: менший",
+        "cs": "Nejnižší nájezd",
+        "en": "Mileage: lowest first"
+      }
+    }
+  ],
+  "attributes": [
+    {"key": "make", "type": "ref", "label": {"ru": "Марка", "uk": "Марка", "cs": "Značka", "en": "Make"}, "group": "main", "required": true, "ref": "car_make", "filter": {"pinned": true, "facet": true}},
+    {"key": "model", "type": "ref", "label": {"ru": "Модель", "uk": "Модель", "cs": "Model", "en": "Model"}, "group": "main", "required": true, "ref": "car_model", "parent": "make", "filter": {"facet": true}},
+    {"key": "year", "type": "int", "label": {"ru": "Год выпуска", "uk": "Рік випуску", "cs": "Rok výroby", "en": "Year"}, "group": "main", "required": true, "min": 1960, "max": 2027, "filter": {"pinned": true, "presets": [2010, 2015, 2018, 2020, 2023]}},
+    {"key": "mileage_km", "type": "int", "label": {"ru": "Пробег", "uk": "Пробіг", "cs": "Najeto", "en": "Mileage"}, "group": "main", "required": true, "min": 0, "max": 2000000, "unit": {"ru": "км", "uk": "км", "cs": "km", "en": "km"}, "filter": {"pinned": true, "presets": [10000, 50000, 100000, 150000, 200000]}},
+    {"key": "condition", "type": "enum", "label": {"ru": "Состояние", "uk": "Стан", "cs": "Stav", "en": "Condition"}, "group": "main", "required": true, "options": [{"value": "new", "label": {"ru": "Новый", "uk": "Новий", "cs": "Nový", "en": "New"}}, {"value": "used", "label": {"ru": "С пробегом", "uk": "Вживаний", "cs": "Ojetý", "en": "Used"}}, {"value": "damaged", "label": {"ru": "Битый", "uk": "Пошкоджений", "cs": "Havarovaný", "en": "Damaged"}}, {"value": "parts", "label": {"ru": "На запчасти", "uk": "На запчастини", "cs": "Na náhradní díly", "en": "For parts"}}], "filter": {"facet": true}},
+    {"key": "steering", "type": "enum", "label": {"ru": "Руль", "uk": "Кермо", "cs": "Řízení", "en": "Steering"}, "group": "main", "required": true, "options": [{"value": "left", "label": {"ru": "Левый", "uk": "Ліве", "cs": "Vlevo", "en": "Left-hand drive"}}, {"value": "right", "label": {"ru": "Правый", "uk": "Праве", "cs": "Vpravo", "en": "Right-hand drive"}}], "hint": {"ru": "Праворульные авто в Чехии можно зарегистрировать, но они редкие и хуже продаются.", "uk": "Праворульне авто в Чехії можна зареєструвати, але їх мало, і вони гірше продаються.", "cs": "Vůz s řízením vpravo lze v ČR přihlásit, ale je vzácný a hůř se prodává.", "en": "Right-hand-drive cars can be registered in Czechia, but they are rare and harder to resell."}, "filter": {"facet": true}},
+    {"key": "body_type", "type": "enum", "label": {"ru": "Тип кузова", "uk": "Тип кузова", "cs": "Karoserie", "en": "Body type"}, "group": "body", "required": true, "options": [{"value": "sedan", "label": {"ru": "Седан", "uk": "Седан", "cs": "Sedan", "en": "Saloon (sedan)"}}, {"value": "hatchback", "label": {"ru": "Хэтчбек", "uk": "Хетчбек", "cs": "Hatchback", "en": "Hatchback"}}, {"value": "liftback", "label": {"ru": "Лифтбек", "uk": "Ліфтбек", "cs": "Liftback", "en": "Liftback"}}, {"value": "wagon", "label": {"ru": "Универсал", "uk": "Універсал", "cs": "Kombi", "en": "Estate (wagon)"}}, {"value": "suv", "label": {"ru": "Внедорожник", "uk": "Позашляховик", "cs": "Terénní vůz", "en": "Off-roader"}}, {"value": "crossover", "label": {"ru": "Кроссовер", "uk": "Кросовер", "cs": "SUV / crossover", "en": "SUV / crossover"}}, {"value": "coupe", "label": {"ru": "Купе", "uk": "Купе", "cs": "Kupé", "en": "Coupé"}}, {"value": "cabrio", "label": {"ru": "Кабриолет", "uk": "Кабріолет", "cs": "Kabriolet", "en": "Convertible"}}, {"value": "minivan", "label": {"ru": "Минивэн", "uk": "Мінівен", "cs": "MPV", "en": "MPV (minivan)"}}, {"value": "pickup", "label": {"ru": "Пикап", "uk": "Пікап", "cs": "Pick-up", "en": "Pickup"}}, {"value": "van", "label": {"ru": "Фургон", "uk": "Фургон", "cs": "Dodávka", "en": "Van"}}], "filter": {"pinned": true, "facet": true}},
+    {"key": "color", "type": "enum", "label": {"ru": "Цвет", "uk": "Колір", "cs": "Barva", "en": "Colour"}, "group": "body", "required": false, "options": [{"value": "white", "label": {"ru": "Белый", "uk": "Білий", "cs": "Bílá", "en": "White"}}, {"value": "black", "label": {"ru": "Чёрный", "uk": "Чорний", "cs": "Černá", "en": "Black"}}, {"value": "silver", "label": {"ru": "Серебристый", "uk": "Сріблястий", "cs": "Stříbrná", "en": "Silver"}}, {"value": "gray", "label": {"ru": "Серый", "uk": "Сірий", "cs": "Šedá", "en": "Grey"}}, {"value": "blue", "label": {"ru": "Синий", "uk": "Синій", "cs": "Modrá", "en": "Blue"}}, {"value": "red", "label": {"ru": "Красный", "uk": "Червоний", "cs": "Červená", "en": "Red"}}, {"value": "green", "label": {"ru": "Зелёный", "uk": "Зелений", "cs": "Zelená", "en": "Green"}}, {"value": "brown", "label": {"ru": "Коричневый", "uk": "Коричневий", "cs": "Hnědá", "en": "Brown"}}, {"value": "beige", "label": {"ru": "Бежевый", "uk": "Бежевий", "cs": "Béžová", "en": "Beige"}}, {"value": "yellow", "label": {"ru": "Жёлтый", "uk": "Жовтий", "cs": "Žlutá", "en": "Yellow"}}, {"value": "orange", "label": {"ru": "Оранжевый", "uk": "Помаранчевий", "cs": "Oranžová", "en": "Orange"}}, {"value": "other", "label": {"ru": "Другой", "uk": "Інший", "cs": "Jiná", "en": "Other"}}], "filter": {"facet": true}},
+    {"key": "seats", "type": "int", "label": {"ru": "Количество мест", "uk": "Кількість місць", "cs": "Počet míst", "en": "Seats"}, "group": "body", "required": false, "min": 1, "max": 20, "filter": {}},
+    {"key": "fuel", "type": "enum", "label": {"ru": "Топливо", "uk": "Пальне", "cs": "Palivo", "en": "Fuel"}, "group": "engine", "required": true, "options": [{"value": "petrol", "label": {"ru": "Бензин", "uk": "Бензин", "cs": "Benzín", "en": "Petrol"}}, {"value": "diesel", "label": {"ru": "Дизель", "uk": "Дизель", "cs": "Nafta", "en": "Diesel"}}, {"value": "hybrid", "label": {"ru": "Гибрид", "uk": "Гібрид", "cs": "Hybrid", "en": "Hybrid"}}, {"value": "plugin_hybrid", "label": {"ru": "Подключаемый гибрид (PHEV)", "uk": "Плагін-гібрид (PHEV)", "cs": "Plug-in hybrid (PHEV)", "en": "Plug-in hybrid (PHEV)"}}, {"value": "electric", "label": {"ru": "Электро", "uk": "Електро", "cs": "Elektro", "en": "Electric"}}, {"value": "lpg", "label": {"ru": "Газ (LPG) + бензин", "uk": "Газ (LPG) + бензин", "cs": "LPG + benzín", "en": "LPG + petrol"}}, {"value": "cng", "label": {"ru": "Метан (CNG) + бензин", "uk": "Метан (CNG) + бензин", "cs": "CNG + benzín", "en": "CNG + petrol"}}], "filter": {"pinned": true, "facet": true}},
+    {"key": "engine_volume", "type": "decimal", "label": {"ru": "Объём двигателя", "uk": "Об'єм двигуна", "cs": "Objem motoru", "en": "Engine size"}, "group": "engine", "required": true, "min": 0.6, "max": 8.5, "step": 0.1, "unit": {"ru": "л", "uk": "л", "cs": "l", "en": "l"}, "depends_on": {"key": "fuel", "values": ["petrol", "diesel", "hybrid", "plugin_hybrid", "lpg", "cng"]}, "filter": {"presets": [1.0, 1.4, 1.6, 2.0, 3.0]}},
+    {"key": "power_hp", "type": "int", "label": {"ru": "Мощность", "uk": "Потужність", "cs": "Výkon", "en": "Power"}, "group": "engine", "required": false, "min": 30, "max": 2000, "unit": {"ru": "л.с.", "uk": "к.с.", "cs": "k", "en": "hp"}, "hint": {"ru": "В чешском техпаспорте мощность в кВт: 1 кВт ≈ 1,36 л.с. (например, 110 кВт ≈ 150 л.с.).", "uk": "У чеському техпаспорті потужність у кВт: 1 кВт ≈ 1,36 к.с. (наприклад, 110 кВт ≈ 150 к.с.).", "cs": "Uvádějte v koních (k). V technickém průkazu je výkon v kW: 1 kW ≈ 1,36 k (110 kW ≈ 150 k).", "en": "Enter horsepower. Czech documents show kW: 1 kW ≈ 1.36 hp (e.g. 110 kW ≈ 150 hp)."}, "filter": {"presets": [75, 100, 150, 200, 300]}},
+    {"key": "battery_kwh", "type": "decimal", "label": {"ru": "Ёмкость батареи", "uk": "Ємність батареї", "cs": "Kapacita baterie", "en": "Battery capacity"}, "group": "engine", "required": false, "min": 5, "max": 250, "step": 0.1, "unit": {"ru": "кВт·ч", "uk": "кВт·год", "cs": "kWh", "en": "kWh"}, "depends_on": {"key": "fuel", "values": ["electric", "plugin_hybrid"]}, "filter": {"presets": [40, 60, 77]}},
+    {"key": "range_km", "type": "int", "label": {"ru": "Запас хода (WLTP)", "uk": "Запас ходу (WLTP)", "cs": "Dojezd (WLTP)", "en": "Range (WLTP)"}, "group": "engine", "required": false, "min": 50, "max": 1200, "unit": {"ru": "км", "uk": "км", "cs": "km", "en": "km"}, "depends_on": {"key": "fuel", "values": ["electric"]}, "filter": {"presets": [300, 400, 500]}},
+    {"key": "transmission", "type": "enum", "label": {"ru": "Коробка передач", "uk": "Коробка передач", "cs": "Převodovka", "en": "Transmission"}, "group": "engine", "required": true, "options": [{"value": "manual", "label": {"ru": "Механика", "uk": "Механіка", "cs": "Manuální", "en": "Manual"}}, {"value": "automatic", "label": {"ru": "Автомат", "uk": "Автомат", "cs": "Automatická", "en": "Automatic"}}, {"value": "robot", "label": {"ru": "Робот (DSG)", "uk": "Робот (DSG)", "cs": "Robotizovaná (DSG)", "en": "Dual-clutch (DSG)"}}, {"value": "cvt", "label": {"ru": "Вариатор (CVT)", "uk": "Варіатор (CVT)", "cs": "CVT", "en": "CVT"}}], "filter": {"pinned": true, "facet": true}},
+    {"key": "drive", "type": "enum", "label": {"ru": "Привод", "uk": "Привід", "cs": "Pohon", "en": "Drive"}, "group": "engine", "required": true, "options": [{"value": "fwd", "label": {"ru": "Передний", "uk": "Передній", "cs": "Přední", "en": "Front-wheel"}}, {"value": "rwd", "label": {"ru": "Задний", "uk": "Задній", "cs": "Zadní", "en": "Rear-wheel"}}, {"value": "awd", "label": {"ru": "Полный (4×4)", "uk": "Повний (4×4)", "cs": "4×4", "en": "All-wheel (4×4)"}}], "filter": {"facet": true}},
+    {"key": "euro_norm", "type": "enum", "label": {"ru": "Экокласс (Euro)", "uk": "Екоклас (Euro)", "cs": "Emisní norma", "en": "Emission standard"}, "group": "engine", "required": false, "options": [{"value": "euro3", "label": "Euro 3"}, {"value": "euro4", "label": "Euro 4"}, {"value": "euro5", "label": "Euro 5"}, {"value": "euro6", "label": "Euro 6"}], "depends_on": {"key": "fuel", "values": ["petrol", "diesel", "hybrid", "plugin_hybrid", "lpg", "cng"]}, "hint": {"ru": "Экостандарт двигателя (в техпаспорте). Ниже Euro 3 — экосбор при регистрации в ČR; чем новее норма, тем проще с эко-зонами в ЕС.", "uk": "Екостандарт двигуна (у техпаспорті). Нижче Euro 3 — екозбір під час реєстрації в ČR; що новіша норма, то простіше з екозонами в ЄС.", "cs": "Emisní norma z technického průkazu. Pod Euro 3 se při přihlášení platí ekologická daň; novější norma = snazší vjezd do eko-zón v EU.", "en": "Engine emission class (see registration doc). Below Euro 3 an eco-fee applies at Czech registration; newer = easier EU low-emission zones."}, "filter": {"facet": true}},
+    {"key": "origin", "type": "enum", "label": {"ru": "Происхождение", "uk": "Походження", "cs": "Původ", "en": "Origin"}, "group": "history", "required": false, "options": [{"value": "cz", "label": {"ru": "Куплен новым в Чехии", "uk": "Куплений новим у Чехії", "cs": "Původem z ČR", "en": "First sold in Czechia"}}, {"value": "imported", "label": {"ru": "Ввезён из-за границы", "uk": "Ввезений з-за кордону", "cs": "Dovoz", "en": "Imported"}}], "hint": {"ru": "Авто, проданное новым в Чехии, проще проверить: история у дилеров, пробег в базе STK. У ввезённых проверяйте историю по VIN.", "uk": "Авто, продане новим у Чехії, легше перевірити: історія в дилерів, пробіг у базі STK. У ввезених перевіряйте історію за VIN.", "cs": "Vůz z ČR se snáz prověří: servisní historie u dealerů, nájezd v databázi STK. U dovozu si historii ověřte podle VIN.", "en": "Cars first sold in CZ are easier to check: dealer service history, mileage in the STK database. For imports, check by VIN."}, "filter": {"facet": true}},
+    {"key": "owners", "type": "int", "label": {"ru": "Владельцев", "uk": "Власників", "cs": "Počet majitelů", "en": "Owners"}, "group": "history", "required": false, "min": 1, "max": 20, "hint": {"ru": "По техпаспорту (ORV). Первый владелец — обычно плюс к цене.", "uk": "За техпаспортом (ORV). Перший власник — зазвичай плюс до ціни.", "cs": "Podle technického průkazu (ORV). První majitel obvykle zvyšuje cenu.", "en": "As per the registration document (ORV). First-owner cars usually fetch more."}, "filter": {"label": {"ru": "Владельцев не больше", "uk": "Власників не більше", "cs": "Max. počet majitelů", "en": "Max. owners"}, "presets": [1, 2, 3]}},
+    {"key": "stk_valid", "type": "bool", "label": {"ru": "Действующий техосмотр (STK)", "uk": "Чинний техогляд (STK)", "cs": "Platná STK", "en": "Valid roadworthiness test (STK)"}, "group": "history", "required": false, "hint": {"ru": "STK — обязательный техосмотр в Чехии: новое авто через 4 года, дальше каждые 2 года. Без действующего STK ездить нельзя.", "uk": "STK — обов'язковий техогляд у Чехії: нове авто через 4 роки, далі кожні 2 роки. Без чинного STK їздити не можна.", "cs": "Technická kontrola: nový vůz po 4 letech, poté každé 2 roky. Bez platné STK se s vozem nesmí jezdit.", "en": "STK is the mandatory Czech roadworthiness test: 4 years after first registration, then every 2 years. No valid STK, no driving."}, "filter": {"label": {"ru": "С действующим STK", "uk": "З чинним STK", "cs": "S platnou STK", "en": "Valid STK"}}},
+    {"key": "stk_until_year", "type": "int", "label": {"ru": "STK действует до (год)", "uk": "STK чинний до (рік)", "cs": "STK platná do (rok)", "en": "STK valid until (year)"}, "group": "history", "required": false, "min": 2024, "max": 2032, "filter": {}},
+    {"key": "service_book", "type": "bool", "label": {"ru": "Сервисная книжка", "uk": "Сервісна книжка", "cs": "Servisní knížka", "en": "Service book"}, "group": "history", "required": false, "hint": {"ru": "Записи о ТО у дилера или в сервисе — подтверждают пробег и уход.", "uk": "Записи про ТО в дилера чи на СТО — підтверджують пробіг і догляд.", "cs": "Záznamy o servisu u dealera či v servisu potvrzují nájezd a péči.", "en": "Dealer or garage service records that back up the mileage and upkeep."}, "filter": {}},
+    {"key": "no_accidents", "type": "bool", "label": {"ru": "Без ДТП", "uk": "Без ДТП", "cs": "Nehavarováno", "en": "No accidents"}, "group": "history", "required": false, "filter": {}},
+    {"key": "vat_deductible", "type": "bool", "label": {"ru": "Возможен вычет DPH (НДС)", "uk": "Можливе відрахування DPH (ПДВ)", "cs": "Možný odpočet DPH", "en": "VAT deductible (DPH)"}, "group": "history", "required": false, "hint": {"ru": "Продавец выставит счёт (fakturu) с DPH 21 %: фирма или OSVČ-плательщик DPH вернёт налог. Частнику не важно.", "uk": "Продавець виставить рахунок (fakturu) з DPH 21 %: фірма чи OSVČ-платник DPH поверне податок. Приватній особі неважливо.", "cs": "Prodejce vystaví fakturu s DPH 21 %; firma či OSVČ plátce DPH si daň odečte. Pro soukromou osobu bez významu.", "en": "Seller issues an invoice with 21% VAT (DPH); VAT-registered firms and sole traders (OSVČ) can reclaim it."}, "filter": {}},
+    {"key": "exchange", "type": "bool", "label": {"ru": "Возможен обмен", "uk": "Можливий обмін", "cs": "Možná výměna", "en": "Exchange possible"}, "group": "history", "required": false, "filter": {}},
+    {"key": "vin", "type": "text", "label": "VIN", "group": "history", "required": false, "hint": {"ru": "17 символов, указан в техпаспорте. По нему покупатели проверят историю и пробег.", "uk": "17 символів, зазначений у техпаспорті. За ним покупці перевірять історію та пробіг.", "cs": "17 znaků, najdete ho v technickém průkazu. Kupující si podle něj ověří historii a nájezd.", "en": "17 characters, shown in the registration document. Buyers use it to check history and mileage."}},
+    {"key": "options", "type": "multi_enum", "label": {"ru": "Опции", "uk": "Опції", "cs": "Výbava", "en": "Features"}, "group": "options", "required": false, "options": [{"value": "abs", "label": "ABS"}, {"value": "esp", "label": "ESP"}, {"value": "cruise", "label": {"ru": "Круиз-контроль", "uk": "Круїз-контроль", "cs": "Tempomat", "en": "Cruise control"}}, {"value": "adaptive_cruise", "label": {"ru": "Адаптивный круиз", "uk": "Адаптивний круїз", "cs": "Adaptivní tempomat", "en": "Adaptive cruise control"}}, {"value": "climate", "label": {"ru": "Климат-контроль", "uk": "Клімат-контроль", "cs": "Automatická klimatizace", "en": "Climate control"}}, {"value": "ac", "label": {"ru": "Кондиционер", "uk": "Кондиціонер", "cs": "Klimatizace", "en": "Air conditioning"}}, {"value": "heated_seats", "label": {"ru": "Подогрев сидений", "uk": "Підігрів сидінь", "cs": "Vyhřívaná sedadla", "en": "Heated seats"}}, {"value": "heated_wheel", "label": {"ru": "Подогрев руля", "uk": "Підігрів керма", "cs": "Vyhřívaný volant", "en": "Heated steering wheel"}}, {"value": "leather", "label": {"ru": "Кожаный салон", "uk": "Шкіряний салон", "cs": "Kožené čalounění", "en": "Leather seats"}}, {"value": "sunroof", "label": {"ru": "Люк", "uk": "Люк", "cs": "Střešní okno", "en": "Sunroof"}}, {"value": "panorama", "label": {"ru": "Панорамная крыша", "uk": "Панорамний дах", "cs": "Panoramatická střecha", "en": "Panoramic roof"}}, {"value": "navigation", "label": {"ru": "Навигация", "uk": "Навігація", "cs": "Navigace", "en": "Navigation"}}, {"value": "carplay", "label": "CarPlay / Android Auto"}, {"value": "camera", "label": {"ru": "Камера заднего вида", "uk": "Камера заднього виду", "cs": "Couvací kamera", "en": "Rear-view camera"}}, {"value": "parktronic", "label": {"ru": "Парктроники", "uk": "Парктроніки", "cs": "Parkovací senzory", "en": "Parking sensors"}}, {"value": "led", "label": {"ru": "LED-фары", "uk": "LED-фари", "cs": "LED světlomety", "en": "LED headlights"}}, {"value": "keyless", "label": {"ru": "Бесключевой доступ", "uk": "Безключовий доступ", "cs": "Bezklíčové odemykání", "en": "Keyless entry"}}, {"value": "isofix", "label": "ISOFIX"}, {"value": "tow_bar", "label": {"ru": "Фаркоп (tažné zařízení)", "uk": "Фаркоп (tažné zařízení)", "cs": "Tažné zařízení", "en": "Tow bar"}}, {"value": "winter_tyres", "label": {"ru": "Зимняя резина в комплекте", "uk": "Зимова гума в комплекті", "cs": "Zimní pneu navíc", "en": "Winter tyres included"}}, {"value": "aux_heater", "label": {"ru": "Автономный отопитель (Webasto)", "uk": "Автономний обігрівач (Webasto)", "cs": "Nezávislé topení (Webasto)", "en": "Auxiliary heater (Webasto)"}}], "filter": {}}
+  ]
+}

@@ -1,0 +1,17 @@
+#!/bin/sh
+# One database and one role per service: services can't read each other's data.
+set -e
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<SQL
+CREATE ROLE auth_svc LOGIN PASSWORD '${AUTH_DB_PASSWORD}';
+CREATE DATABASE kup_auth OWNER auth_svc;
+CREATE ROLE listings_svc LOGIN PASSWORD '${LISTINGS_DB_PASSWORD}';
+CREATE DATABASE kup_listings OWNER listings_svc;
+CREATE ROLE notify_svc LOGIN PASSWORD '${NOTIFY_DB_PASSWORD}';
+CREATE DATABASE kup_notify OWNER notify_svc;
+CREATE ROLE chat_svc LOGIN PASSWORD '${CHAT_DB_PASSWORD}';
+CREATE DATABASE kup_chat OWNER chat_svc;
+REVOKE CONNECT ON DATABASE kup_auth FROM PUBLIC;
+REVOKE CONNECT ON DATABASE kup_listings FROM PUBLIC;
+REVOKE CONNECT ON DATABASE kup_notify FROM PUBLIC;
+REVOKE CONNECT ON DATABASE kup_chat FROM PUBLIC;
+SQL
